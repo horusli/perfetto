@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {PluginContext} from '../../common/plugin_api';
-import {NUM} from '../../common/query_result';
-import {fromNs, toNsCeil, toNsFloor} from '../../common/time';
-import {TrackData} from '../../common/track_data';
-import {LIMIT} from '../../common/track_data';
+import { PluginContext } from '../../common/plugin_api';
+import { NUM } from '../../common/query_result';
+import { fromPs, toPsCeil, toPsFloor } from '../../common/time';
+import { TrackData } from '../../common/track_data';
+import { LIMIT } from '../../common/track_data';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import {checkerboardExcept} from '../../frontend/checkerboard';
-import {globals} from '../../frontend/globals';
-import {NewTrackArgs, Track} from '../../frontend/track';
+import { checkerboardExcept } from '../../frontend/checkerboard';
+import { globals } from '../../frontend/globals';
+import { NewTrackArgs, Track } from '../../frontend/track';
 
 export const ANDROID_LOGS_TRACK_KIND = 'AndroidLogTrack';
 
@@ -39,7 +39,7 @@ export interface Data extends TrackData {
   priorities: Uint8Array;
 }
 
-export interface Config {}
+export interface Config { }
 
 interface LevelCfg {
   color: string;
@@ -47,11 +47,11 @@ interface LevelCfg {
 }
 
 const LEVELS: LevelCfg[] = [
-  {color: 'hsl(122, 39%, 49%)', prios: [0, 1, 2, 3]},  // Up to DEBUG: Green.
-  {color: 'hsl(0, 0%, 70%)', prios: [4]},              // 4 (INFO) -> Gray.
-  {color: 'hsl(45, 100%, 51%)', prios: [5]},           // 5 (WARN) -> Amber.
-  {color: 'hsl(4, 90%, 58%)', prios: [6]},             // 6 (ERROR) -> Red.
-  {color: 'hsl(291, 64%, 42%)', prios: [7]},           // 7 (FATAL) -> Purple
+  { color: 'hsl(122, 39%, 49%)', prios: [0, 1, 2, 3] },  // Up to DEBUG: Green.
+  { color: 'hsl(0, 0%, 70%)', prios: [4] },              // 4 (INFO) -> Gray.
+  { color: 'hsl(45, 100%, 51%)', prios: [5] },           // 5 (WARN) -> Amber.
+  { color: 'hsl(4, 90%, 58%)', prios: [6] },             // 6 (ERROR) -> Red.
+  { color: 'hsl(291, 64%, 42%)', prios: [7] },           // 7 (FATAL) -> Purple
 ];
 
 const MARGIN_TOP = 2;
@@ -62,20 +62,20 @@ class AndroidLogTrackController extends TrackController<Config, Data> {
   static readonly kind = ANDROID_LOGS_TRACK_KIND;
 
   async onBoundsChange(start: number, end: number, resolution: number):
-      Promise<Data> {
-    const startNs = toNsFloor(start);
-    const endNs = toNsCeil(end);
+    Promise<Data> {
+    const startPs = toPsFloor(start);
+    const endPs = toPsCeil(end);
 
     // |resolution| is in s/px the frontend wants.
-    const quantNs = toNsCeil(resolution);
+    const quantPs = toPsCeil(resolution);
 
     const queryRes = await this.query(`
       select
-        cast(ts / ${quantNs} as integer) * ${quantNs} as tsQuant,
+        cast(ts / ${quantPs} as integer) * ${quantPs} as tsQuant,
         prio,
         count(prio) as numEvents
       from android_logs
-      where ts >= ${startNs} and ts <= ${endNs}
+      where ts >= ${startPs} and ts <= ${endPs}
       group by tsQuant, prio
       order by tsQuant, prio limit ${LIMIT};`);
 
@@ -91,9 +91,9 @@ class AndroidLogTrackController extends TrackController<Config, Data> {
     };
 
 
-    const it = queryRes.iter({tsQuant: NUM, prio: NUM, numEvents: NUM});
+    const it = queryRes.iter({ tsQuant: NUM, prio: NUM, numEvents: NUM });
     for (let row = 0; it.valid(); it.next(), row++) {
-      result.timestamps[row] = fromNs(it.tsQuant);
+      result.timestamps[row] = fromPs(it.tsQuant);
       const prio = Math.min(it.prio, 7);
       result.priorities[row] |= (1 << prio);
       result.numEvents += it.numEvents;
@@ -113,7 +113,7 @@ class AndroidLogTrack extends Track<Config, Data> {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
-    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
+    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
 
     const data = this.data();
 
@@ -125,15 +125,15 @@ class AndroidLogTrack extends Track<Config, Data> {
     const visibleEndPx = timeScale.timeToPx(visibleWindowTime.end);
 
     checkerboardExcept(
-        ctx,
-        this.getHeight(),
-        visibleStartPx,
-        visibleEndPx,
-        dataStartPx,
-        dataEndPx);
+      ctx,
+      this.getHeight(),
+      visibleStartPx,
+      visibleEndPx,
+      dataStartPx,
+      dataEndPx);
 
     const quantWidth =
-        Math.max(EVT_PX, timeScale.deltaTimeToPx(data.resolution));
+      Math.max(EVT_PX, timeScale.deltaTimeToPx(data.resolution));
     const blockH = RECT_HEIGHT / LEVELS.length;
     for (let i = 0; i < data.timestamps.length; i++) {
       for (let lev = 0; lev < LEVELS.length; lev++) {

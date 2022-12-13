@@ -375,7 +375,7 @@ export abstract class Engine {
       startTs: NUM,
       endTs: NUM,
     });
-    return new TimeSpan(bounds.startTs / 1e9, bounds.endTs / 1e9);
+    return new TimeSpan(bounds.startTs / 1e12, bounds.endTs / 1e12);
   }
 
   async getTracingMetadataTimeBounds(): Promise<TimeSpan> {
@@ -392,10 +392,10 @@ export abstract class Engine {
       const columnName = it.name;
       const timestamp = it.intValue;
       if (timestamp === null) continue;
-      if (columnName === 'tracing_disabled_ns') {
-        endBound = Math.min(endBound, timestamp / 1e9);
+      if (columnName === 'tracing_disabled_ps') {
+        endBound = Math.min(endBound, timestamp / 1e12);
       } else {
-        startBound = Math.max(startBound, timestamp / 1e9);
+        startBound = Math.max(startBound, timestamp / 1e12);
       }
     }
 

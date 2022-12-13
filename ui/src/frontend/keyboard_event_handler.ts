@@ -23,7 +23,7 @@ import {
 } from './scroll_helper';
 import {executeSearch} from './search_handler';
 
-const INSTANT_FOCUS_DURATION_S = 1 / 1e9;  // 1 ns.
+const INSTANT_FOCUS_DURATION_S = 1 / 1e12;  // 1 ps.
 type Direction = 'Forward'|'Backward';
 
 // Handles all key events than are not handled by the

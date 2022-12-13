@@ -14,17 +14,17 @@
 
 import * as m from 'mithril';
 
-import {Actions} from '../../common/actions';
-import {PluginContext} from '../../common/plugin_api';
-import {NUM, NUM_NULL, STR} from '../../common/query_result';
-import {fromNs, toNs} from '../../common/time';
+import { Actions } from '../../common/actions';
+import { PluginContext } from '../../common/plugin_api';
+import { NUM, NUM_NULL, STR } from '../../common/query_result';
+import { fromPs, toPs } from '../../common/time';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import {globals} from '../../frontend/globals';
-import {NewTrackArgs, Track} from '../../frontend/track';
-import {TrackButton, TrackButtonAttrs} from '../../frontend/track_panel';
-import {ChromeSliceTrack} from '../chrome_slices';
+import { globals } from '../../frontend/globals';
+import { NewTrackArgs, Track } from '../../frontend/track';
+import { TrackButton, TrackButtonAttrs } from '../../frontend/track_panel';
+import { ChromeSliceTrack } from '../chrome_slices';
 
 export const DEBUG_SLICE_TRACK_KIND = 'DebugSliceTrack';
 
@@ -32,22 +32,22 @@ export interface Config {
   maxDepth: number;
 }
 
-import {Data} from '../chrome_slices';
-export {Data} from '../chrome_slices';
+import { Data } from '../chrome_slices';
+export { Data } from '../chrome_slices';
 
 class DebugSliceTrackController extends TrackController<Config, Data> {
   static readonly kind = DEBUG_SLICE_TRACK_KIND;
 
   async onReload() {
     const rawResult = await this.query(
-        `select ifnull(max(depth), 1) as maxDepth from debug_slices`);
-    const maxDepth = rawResult.firstRow({maxDepth: NUM}).maxDepth;
+      `select ifnull(max(depth), 1) as maxDepth from debug_slices`);
+    const maxDepth = rawResult.firstRow({ maxDepth: NUM }).maxDepth;
     globals.dispatch(
-        Actions.updateTrackConfig({id: this.trackId, config: {maxDepth}}));
+      Actions.updateTrackConfig({ id: this.trackId, config: { maxDepth } }));
   }
 
   async onBoundsChange(start: number, end: number, resolution: number):
-      Promise<Data> {
+    Promise<Data> {
     const queryRes = await this.query(`select
       ifnull(id, -1) as id,
       CAST(ifnull(name, '[null]') AS text) as name,
@@ -55,7 +55,7 @@ class DebugSliceTrackController extends TrackController<Config, Data> {
       iif(dur = -1, (SELECT end_ts FROM trace_bounds) - ts, dur) as dur,
       ifnull(depth, 0) as depth
       from debug_slices
-      where (ts + dur) >= ${toNs(start)} and ts <= ${toNs(end)}`);
+      where (ts + dur) >= ${toPs(start)} and ts <= ${toPs(end)}`);
 
     const numRows = queryRes.numRows();
 
@@ -85,7 +85,7 @@ class DebugSliceTrackController extends TrackController<Config, Data> {
     }
 
     const it = queryRes.iter(
-        {id: NUM, name: STR, ts: NUM_NULL, dur: NUM_NULL, depth: NUM});
+      { id: NUM, name: STR, ts: NUM_NULL, dur: NUM_NULL, depth: NUM });
     for (let row = 0; it.valid(); it.next(), row++) {
       let sliceStart: number;
       let sliceEnd: number;
@@ -96,8 +96,8 @@ class DebugSliceTrackController extends TrackController<Config, Data> {
         sliceEnd = sliceStart + it.dur;
       }
       slices.sliceIds[row] = it.id;
-      slices.starts[row] = fromNs(sliceStart);
-      slices.ends[row] = fromNs(sliceEnd);
+      slices.starts[row] = fromPs(sliceStart);
+      slices.ends[row] = fromPs(sliceEnd);
       slices.depths[row] = it.depth;
       const sliceName = it.name;
       slices.titles[row] = internString(sliceName);

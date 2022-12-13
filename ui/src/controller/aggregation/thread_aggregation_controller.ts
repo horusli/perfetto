@@ -17,7 +17,7 @@ import {Engine} from '../../common/engine';
 import {NUM, NUM_NULL, STR_NULL} from '../../common/query_result';
 import {Area, Sorting} from '../../common/state';
 import {translateState} from '../../common/thread_state';
-import {toNs} from '../../common/time';
+import {toPs} from '../../common/time';
 import {
   Config,
   THREAD_STATE_TRACK_KIND,
@@ -60,8 +60,8 @@ export class ThreadAggregationController extends AggregationController {
       JOIN thread USING(upid)
       JOIN thread_state USING(utid)
       WHERE utid IN (${this.utids}) AND
-      thread_state.ts + thread_state.dur > ${toNs(area.startSec)} AND
-      thread_state.ts < ${toNs(area.endSec)}
+      thread_state.ts + thread_state.dur > ${toPs(area.startSec)} AND
+      thread_state.ts < ${toPs(area.endSec)}
       GROUP BY utid, concat_state
     `;
 
@@ -78,8 +78,8 @@ export class ThreadAggregationController extends AggregationController {
       JOIN thread USING(upid)
       JOIN thread_state USING(utid)
       WHERE utid IN (${this.utids}) AND thread_state.ts + thread_state.dur > ${
-            toNs(area.startSec)} AND
-      thread_state.ts < ${toNs(area.endSec)}
+            toPs(area.startSec)} AND
+      thread_state.ts < ${toPs(area.endSec)}
       GROUP BY state, io_wait`;
     const result = await engine.query(query);
 

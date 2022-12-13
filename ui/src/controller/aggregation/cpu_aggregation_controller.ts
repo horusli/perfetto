@@ -15,7 +15,7 @@
 import {ColumnDef} from '../../common/aggregation_data';
 import {Engine} from '../../common/engine';
 import {Area, Sorting} from '../../common/state';
-import {toNs} from '../../common/time';
+import {toPs} from '../../common/time';
 import {Config, CPU_SLICE_TRACK_KIND} from '../../tracks/cpu_slices';
 import {globals} from '../globals';
 
@@ -46,8 +46,8 @@ export class CpuAggregationController extends AggregationController {
         JOIN thread_state USING(utid)
         WHERE cpu IN (${selectedCpus}) AND
         state = "Running" AND
-        thread_state.ts + thread_state.dur > ${toNs(area.startSec)} AND
-        thread_state.ts < ${toNs(area.endSec)} group by utid`;
+        thread_state.ts + thread_state.dur > ${toPs(area.startSec)} AND
+        thread_state.ts < ${toPs(area.endSec)} group by utid`;
 
     await engine.query(query);
     return true;

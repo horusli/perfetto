@@ -15,11 +15,11 @@
 
 import * as m from 'mithril';
 
-import {Actions} from '../common/actions';
-import {QueryResponse} from '../common/queries';
+import { Actions } from '../common/actions';
+import { QueryResponse } from '../common/queries';
 
-import {globals} from './globals';
-import {createPage} from './pages';
+import { globals } from './globals';
+import { createPage } from './pages';
 
 
 interface StatsSectionAttrs {
@@ -36,7 +36,7 @@ interface StatsSectionAttrs {
 class StatsSection implements m.ClassComponent<StatsSectionAttrs> {
   private queryDispatched = false;
 
-  view({attrs}: m.CVnode<StatsSectionAttrs>) {
+  view({ attrs }: m.CVnode<StatsSectionAttrs>) {
     if (!this.queryDispatched) {
       this.queryDispatched = true;
       globals.dispatch(Actions.executeQuery({
@@ -62,23 +62,23 @@ class StatsSection implements m.ClassComponent<StatsSectionAttrs> {
       }
       const idx = row.idx !== '' ? `[${row.idx}]` : '';
       tableRows.push(m(
-          'tr',
-          m('td.name', {title: row.description}, `${row.name}${idx}`, help),
-          m('td', `${row.value}`),
-          m('td', `${row.severity} (${row.source})`),
-          ));
+        'tr',
+        m('td.name', { title: row.description }, `${row.name}${idx}`, help),
+        m('td', `${row.value}`),
+        m('td', `${row.severity} (${row.source})`),
+      ));
     }
 
     return m(
-        `section${attrs.cssClass}`,
-        m('h2', attrs.title),
-        m('h3', attrs.subTitle),
-        m(
-            'table',
-            m('thead',
-              m('tr', m('td', 'Name'), m('td', 'Value'), m('td', 'Type'))),
-            m('tbody', tableRows),
-            ),
+      `section${attrs.cssClass}`,
+      m('h2', attrs.title),
+      m('h3', attrs.subTitle),
+      m(
+        'table',
+        m('thead',
+          m('tr', m('td', 'Name'), m('td', 'Value'), m('td', 'Type'))),
+        m('tbody', tableRows),
+      ),
     );
   }
 }
@@ -87,10 +87,10 @@ class MetricErrors implements m.ClassComponent {
   view() {
     if (!globals.metricError) return;
     return m(
-        `section.errors`,
-        m('h2', `Metric Errors`),
-        m('h3', `One or more metrics were not computed successfully:`),
-        m('div.metric-error', globals.metricError));
+      `section.errors`,
+      m('h2', `Metric Errors`),
+      m('h3', `One or more metrics were not computed successfully:`),
+      m('div.metric-error', globals.metricError));
   }
 }
 
@@ -131,20 +131,20 @@ class TraceMetadata implements m.ClassComponent {
     const tableRows = [];
     for (const row of resp.rows) {
       tableRows.push(m(
-          'tr',
-          m('td.name', `${row.name}`),
-          m('td', `${row.value}`),
-          ));
+        'tr',
+        m('td.name', `${row.name}`),
+        m('td', `${row.value}`),
+      ));
     }
 
     return m(
-        'section',
-        m('h2', 'System info and metadata'),
-        m(
-            'table',
-            m('thead', m('tr', m('td', 'Name'), m('td', 'Value'))),
-            m('tbody', tableRows),
-            ),
+      'section',
+      m('h2', 'System info and metadata'),
+      m(
+        'table',
+        m('thead', m('tr', m('td', 'Name'), m('td', 'Value'))),
+        m('tbody', tableRows),
+      ),
     );
   }
 }
@@ -190,22 +190,19 @@ class AndroidGameInterventionList implements m.ClassComponent {
     for (const row of resp.rows) {
       if (row.standard_mode_supported) {
         standardInterventions =
-            `angle=${row.standard_mode_use_angle},downscale=${
-                row.standard_mode_downscale},fps=${row.standard_mode_fps}`;
+          `angle=${row.standard_mode_use_angle},downscale=${row.standard_mode_downscale},fps=${row.standard_mode_fps}`;
       } else {
         standardInterventions = 'Not supported';
       }
 
       if (row.perf_mode_supported) {
-        perfInterventions = `angle=${row.perf_mode_use_angle},downscale=${
-            row.perf_mode_downscale},fps=${row.perf_mode_fps}`;
+        perfInterventions = `angle=${row.perf_mode_use_angle},downscale=${row.perf_mode_downscale},fps=${row.perf_mode_fps}`;
       } else {
         perfInterventions = 'Not supported';
       }
 
       if (row.battery_mode_supported) {
-        batteryInterventions = `angle=${row.battery_mode_use_angle},downscale=${
-            row.battery_mode_downscale},fps=${row.battery_mode_fps}`;
+        batteryInterventions = `angle=${row.battery_mode_use_angle},downscale=${row.battery_mode_downscale},fps=${row.battery_mode_fps}`;
       } else {
         batteryInterventions = 'Not supported';
       }
@@ -219,31 +216,31 @@ class AndroidGameInterventionList implements m.ClassComponent {
         row.current_mode = 'Battery';
       }
       tableRows.push(m(
-          'tr',
-          m('td.name', `${row.package_name}`),
-          m('td', `${row.current_mode}`),
-          m('td', standardInterventions),
-          m('td', perfInterventions),
-          m('td', batteryInterventions),
-          ));
+        'tr',
+        m('td.name', `${row.package_name}`),
+        m('td', `${row.current_mode}`),
+        m('td', standardInterventions),
+        m('td', perfInterventions),
+        m('td', batteryInterventions),
+      ));
     }
 
     return m(
-        'section',
-        m('h2', 'Game Intervention List'),
-        m(
-            'table',
-            m('thead',
-              m(
-                  'tr',
-                  m('td', 'Name'),
-                  m('td', 'Current mode'),
-                  m('td', 'Standard mode interventions'),
-                  m('td', 'Performance mode interventions'),
-                  m('td', 'Battery mode interventions'),
-                  )),
-            m('tbody', tableRows),
-            ),
+      'section',
+      m('h2', 'Game Intervention List'),
+      m(
+        'table',
+        m('thead',
+          m(
+            'tr',
+            m('td', 'Name'),
+            m('td', 'Current mode'),
+            m('td', 'Standard mode interventions'),
+            m('td', 'Performance mode interventions'),
+            m('td', 'Battery mode interventions'),
+          )),
+        m('tbody', tableRows),
+      ),
     );
   }
 }
@@ -270,27 +267,26 @@ class PackageList implements m.ClassComponent {
     const tableRows = [];
     for (const row of resp.rows) {
       tableRows.push(m(
-          'tr',
-          m('td.name', `${row.package_name}`),
-          m('td', `${row.version_code}`),
-          m('td',
-            `${row.debuggable ? 'debuggable' : ''} ${
-                row.profileable_from_shell ? 'profileable' : ''}`),
-          ));
+        'tr',
+        m('td.name', `${row.package_name}`),
+        m('td', `${row.version_code}`),
+        m('td',
+          `${row.debuggable ? 'debuggable' : ''} ${row.profileable_from_shell ? 'profileable' : ''}`),
+      ));
     }
 
     return m(
-        'section',
-        m('h2', 'Package list'),
-        m(
-            'table',
-            m('thead',
-              m('tr',
-                m('td', 'Name'),
-                m('td', 'Version code'),
-                m('td', 'Flags'))),
-            m('tbody', tableRows),
-            ),
+      'section',
+      m('h2', 'Package list'),
+      m(
+        'table',
+        m('thead',
+          m('tr',
+            m('td', 'Name'),
+            m('td', 'Version code'),
+            m('td', 'Flags'))),
+        m('tbody', tableRows),
+      ),
     );
   }
 }
@@ -298,41 +294,41 @@ class PackageList implements m.ClassComponent {
 export const TraceInfoPage = createPage({
   view() {
     return m(
-        '.trace-info-page',
-        m(MetricErrors),
-        m(StatsSection, {
-          queryId: 'info_errors',
-          title: 'Import errors',
-          cssClass: '.errors',
-          subTitle:
-              `The following errors have been encountered while importing the
+      '.trace-info-page',
+      m(MetricErrors),
+      m(StatsSection, {
+        queryId: 'info_errors',
+        title: 'Import errors',
+        cssClass: '.errors',
+        subTitle:
+          `The following errors have been encountered while importing the
                trace. These errors are usually non-fatal but indicate that one
                or more tracks might be missing or showing erroneous data.`,
-          sqlConstraints: `severity = 'error' and value > 0`,
+        sqlConstraints: `severity = 'error' and value > 0`,
 
-        }),
-        m(StatsSection, {
-          queryId: 'info_data_losses',
-          title: 'Data losses',
-          cssClass: '.errors',
-          subTitle:
-              `These counters are collected at trace recording time. The trace
+      }),
+      m(StatsSection, {
+        queryId: 'info_data_losses',
+        title: 'Data losses',
+        cssClass: '.errors',
+        subTitle:
+          `These counters are collected at trace recording time. The trace
                data for one or more data sources was droppped and hence some
                track contents will be incomplete.`,
-          sqlConstraints: `severity = 'data_loss' and value > 0`,
-        }),
-        m(TraceMetadata),
-        m(PackageList),
-        m(AndroidGameInterventionList),
-        m(StatsSection, {
-          queryId: 'info_all',
-          title: 'Debugging stats',
-          cssClass: '',
-          subTitle: `Debugging statistics such as trace buffer usage and metrics
-                     coming from the TraceProcessor importer stages.`,
-          sqlConstraints: '',
+        sqlConstraints: `severity = 'data_loss' and value > 0`,
+      }),
+      m(TraceMetadata),
+      m(PackageList),
+      m(AndroidGameInterventionList),
+      //m(StatsSection, {
+      //  queryId: 'info_all',
+      //  title: 'Debugging stats',
+      //  cssClass: '',
+      //  subTitle: `Debugging statistics such as trace buffer usage and metrics
+      //             coming from the TraceProcessor importer stages.`,
+      //  sqlConstraints: '',
 
-        }),
+      //}),
     );
   },
 });

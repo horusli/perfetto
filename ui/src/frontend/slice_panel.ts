@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {timeToCode, toNs} from '../common/time';
+import { timeToCode, toPs } from '../common/time';
 
-import {globals, SliceDetails} from './globals';
-import {Panel} from './panel';
+import { globals, SliceDetails } from './globals';
+import { Panel } from './panel';
 
 // To display process or thread, we want to concatenate their name with ID, but
 // either can be undefined and all the cases need to be considered carefully to
@@ -24,24 +24,25 @@ import {Panel} from './panel';
 //
 // Result can be undefined if both name and process are, in this case result is
 // not going to be displayed in the UI.
-function getDisplayName(name: string|undefined, id: number|undefined): string|
-    undefined {
+function getDisplayName(name: string | undefined, id: number | undefined): string |
+  undefined {
   if (name === undefined) {
     return id === undefined ? undefined : `${id}`;
   } else {
-    return id === undefined ? name : `${name} ${id}`;
+    //return id === undefined ? name : `${name} ${id}`;
+    return id === undefined ? name : `${name}`;
   }
 }
 
 export abstract class SlicePanel extends Panel {
   protected computeDuration(ts: number, dur: number): string {
-    return toNs(dur) === -1 ?
-        `${globals.state.traceTime.endSec - ts} (Did not end)` :
-        timeToCode(dur);
+    return toPs(dur) === -1 ?
+      `${globals.state.traceTime.endSec - ts} (Did not end)` :
+      timeToCode(dur);
   }
 
   protected getProcessThreadDetails(sliceInfo: SliceDetails) {
-    return new Map<string, string|undefined>([
+    return new Map<string, string | undefined>([
       ['Thread', getDisplayName(sliceInfo.threadName, sliceInfo.tid)],
       ['Process', getDisplayName(sliceInfo.processName, sliceInfo.pid)],
       ['User ID', sliceInfo.uid ? String(sliceInfo.uid) : undefined],

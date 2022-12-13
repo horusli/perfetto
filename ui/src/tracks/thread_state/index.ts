@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {search} from '../../base/binary_search';
-import {assertFalse} from '../../base/logging';
-import {Actions} from '../../common/actions';
-import {cropText} from '../../common/canvas_utils';
-import {colorForState} from '../../common/colorizer';
-import {PluginContext} from '../../common/plugin_api';
-import {NUM, NUM_NULL, STR_NULL} from '../../common/query_result';
-import {translateState} from '../../common/thread_state';
-import {fromNs, toNs} from '../../common/time';
-import {TrackData} from '../../common/track_data';
-import {TrackController} from '../../controller/track_controller';
-import {checkerboardExcept} from '../../frontend/checkerboard';
-import {globals} from '../../frontend/globals';
-import {NewTrackArgs, Track} from '../../frontend/track';
+import { search } from '../../base/binary_search';
+import { assertFalse } from '../../base/logging';
+import { Actions } from '../../common/actions';
+import { cropText } from '../../common/canvas_utils';
+import { colorForState } from '../../common/colorizer';
+import { PluginContext } from '../../common/plugin_api';
+import { NUM, NUM_NULL, STR_NULL } from '../../common/query_result';
+import { translateState } from '../../common/thread_state';
+import { fromPs, toPs } from '../../common/time';
+import { TrackData } from '../../common/track_data';
+import { TrackController } from '../../controller/track_controller';
+import { checkerboardExcept } from '../../frontend/checkerboard';
+import { globals } from '../../frontend/globals';
+import { NewTrackArgs, Track } from '../../frontend/track';
 
 
 export const THREAD_STATE_TRACK_KIND = 'ThreadStateTrack';
@@ -46,7 +46,7 @@ export interface Config {
 class ThreadStateTrackController extends TrackController<Config, Data> {
   static readonly kind = THREAD_STATE_TRACK_KIND;
 
-  private maxDurNs = 0;
+  private maxDurPs = 0;
 
   async onSetup() {
     await this.query(`
@@ -66,23 +66,23 @@ class ThreadStateTrackController extends TrackController<Config, Data> {
       select ifnull(max(dur), 0) as maxDur
       from ${this.tableName('thread_state')}
     `);
-    this.maxDurNs = queryRes.firstRow({maxDur: NUM}).maxDur;
+    this.maxDurPs = queryRes.firstRow({ maxDur: NUM }).maxDur;
   }
 
   async onBoundsChange(start: number, end: number, resolution: number):
-      Promise<Data> {
-    const resolutionNs = toNs(resolution);
-    const startNs = toNs(start);
-    const endNs = toNs(end);
+    Promise<Data> {
+    const resolutionPs = toPs(resolution);
+    const startPs = toPs(start);
+    const endPs = toPs(end);
 
     // ns per quantization bucket (i.e. ns per pixel). /2 * 2 is to force it to
     // be an even number, so we can snap in the middle.
-    const bucketNs =
-        Math.max(Math.round(resolutionNs * this.pxSize() / 2) * 2, 1);
+    const bucketPs =
+      Math.max(Math.round(resolutionPs * this.pxSize() / 2) * 2, 1);
 
     const query = `
       select
-        (ts + ${bucketNs / 2}) / ${bucketNs} * ${bucketNs} as tsq,
+        (ts + ${bucketPs / 2}) / ${bucketPs} * ${bucketPs} as tsq,
         ts,
         state = 'S' as is_sleep,
         max(dur) as dur,
@@ -92,8 +92,8 @@ class ThreadStateTrackController extends TrackController<Config, Data> {
         ifnull(id, -1) as id
       from ${this.tableName('thread_state')}
       where
-        ts >= ${startNs - this.maxDurNs} and
-        ts <= ${endNs}
+        ts >= ${startPs - this.maxDurPs} and
+        ts <= ${endPs}
       group by tsq, is_sleep
       order by tsq
     `;
@@ -115,15 +115,15 @@ class ThreadStateTrackController extends TrackController<Config, Data> {
     };
 
     const stringIndexes = new Map<
-        {shortState: string | undefined; ioWait: boolean | undefined},
-        number>();
+      { shortState: string | undefined; ioWait: boolean | undefined },
+      number>();
     function internState(
-        shortState: string|undefined, ioWait: boolean|undefined) {
-      let idx = stringIndexes.get({shortState, ioWait});
+      shortState: string | undefined, ioWait: boolean | undefined) {
+      let idx = stringIndexes.get({ shortState, ioWait });
       if (idx !== undefined) return idx;
       idx = data.strings.length;
       data.strings.push(translateState(shortState, ioWait));
-      stringIndexes.set({shortState, ioWait}, idx);
+      stringIndexes.set({ shortState, ioWait }, idx);
       return idx;
     }
     const it = queryRes.iter({
@@ -136,13 +136,13 @@ class ThreadStateTrackController extends TrackController<Config, Data> {
       'id': NUM,
     });
     for (let row = 0; it.valid(); it.next(), row++) {
-      const startNsQ = it.tsq;
-      const startNs = it.ts;
-      const durNs = it.dur;
-      const endNs = startNs + durNs;
+      const startPsQ = it.tsq;
+      const startPs = it.ts;
+      const durPs = it.dur;
+      const endPs = startPs + durPs;
 
-      let endNsQ = Math.floor((endNs + bucketNs / 2 - 1) / bucketNs) * bucketNs;
-      endNsQ = Math.max(endNsQ, startNsQ + bucketNs);
+      let endPsQ = Math.floor((endPs + bucketPs / 2 - 1) / bucketPs) * bucketPs;
+      endPsQ = Math.max(endPsQ, startPsQ + bucketPs);
 
       const cpu = it.cpu;
       const state = it.state || undefined;
@@ -151,10 +151,10 @@ class ThreadStateTrackController extends TrackController<Config, Data> {
 
       // We should never have the end timestamp being the same as the bucket
       // start.
-      assertFalse(startNsQ === endNsQ);
+      assertFalse(startPsQ === endPsQ);
 
-      data.starts[row] = fromNs(startNsQ);
-      data.ends[row] = fromNs(endNsQ);
+      data.starts[row] = fromPs(startPsQ);
+      data.ends[row] = fromPs(endPsQ);
       data.state[row] = internState(state, ioWait);
       data.ids[row] = id;
       data.cpu[row] = cpu;
@@ -186,7 +186,7 @@ class ThreadStateTrack extends Track<Config, Data> {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
-    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
+    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
     const data = this.data();
     const charWidth = ctx.measureText('dbpqaouk').width / 8;
 
@@ -194,15 +194,15 @@ class ThreadStateTrack extends Track<Config, Data> {
 
     // The draw of the rect on the selected slice must happen after the other
     // drawings, otherwise it would result under another rect.
-    let drawRectOnSelected = () => {};
+    let drawRectOnSelected = () => { };
 
     checkerboardExcept(
-        ctx,
-        this.getHeight(),
-        timeScale.timeToPx(visibleWindowTime.start),
-        timeScale.timeToPx(visibleWindowTime.end),
-        timeScale.timeToPx(data.start),
-        timeScale.timeToPx(data.end),
+      ctx,
+      this.getHeight(),
+      timeScale.timeToPx(visibleWindowTime.start),
+      timeScale.timeToPx(visibleWindowTime.end),
+      timeScale.timeToPx(data.start),
+      timeScale.timeToPx(data.end),
     );
 
     ctx.textAlign = 'center';
@@ -232,8 +232,8 @@ class ThreadStateTrack extends Track<Config, Data> {
 
       const currentSelection = globals.state.currentSelection;
       const isSelected = currentSelection &&
-          currentSelection.kind === 'THREAD_STATE' &&
-          currentSelection.id === data.ids[i];
+        currentSelection.kind === 'THREAD_STATE' &&
+        currentSelection.id === data.ids[i];
 
       const color = colorForState(state);
 
@@ -255,19 +255,19 @@ class ThreadStateTrack extends Track<Config, Data> {
       if (isSelected) {
         drawRectOnSelected = () => {
           const rectStart =
-              Math.max(0 - EXCESS_WIDTH, timeScale.timeToPx(tStart));
+            Math.max(0 - EXCESS_WIDTH, timeScale.timeToPx(tStart));
           const rectEnd = Math.min(
-              timeScale.timeToPx(visibleWindowTime.end) + EXCESS_WIDTH,
-              timeScale.timeToPx(tEnd));
+            timeScale.timeToPx(visibleWindowTime.end) + EXCESS_WIDTH,
+            timeScale.timeToPx(tEnd));
           const color = colorForState(state);
           ctx.strokeStyle = `hsl(${color.h},${color.s}%,${color.l * 0.7}%)`;
           ctx.beginPath();
           ctx.lineWidth = 3;
           ctx.strokeRect(
-              rectStart,
-              MARGIN_TOP - 1.5,
-              rectEnd - rectStart,
-              RECT_HEIGHT + 3);
+            rectStart,
+            MARGIN_TOP - 1.5,
+            rectEnd - rectStart,
+            RECT_HEIGHT + 3);
           ctx.closePath();
         };
       }
@@ -275,17 +275,17 @@ class ThreadStateTrack extends Track<Config, Data> {
     drawRectOnSelected();
   }
 
-  onMouseClick({x}: {x: number}) {
+  onMouseClick({ x }: { x: number }) {
     const data = this.data();
     if (data === undefined) return false;
-    const {timeScale} = globals.frontendLocalState;
+    const { timeScale } = globals.frontendLocalState;
     const time = timeScale.pxToTime(x);
     const index = search(data.starts, time);
     if (index === -1) return false;
 
     const id = data.ids[index];
     globals.makeSelection(
-        Actions.selectThreadState({id, trackId: this.trackState.id}));
+      Actions.selectThreadState({ id, trackId: this.trackState.id }));
     return true;
   }
 }

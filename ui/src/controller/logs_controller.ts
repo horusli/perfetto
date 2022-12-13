@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Engine} from '../common/engine';
+import { Engine } from '../common/engine';
 import {
   LogBounds,
   LogBoundsKey,
@@ -20,45 +20,43 @@ import {
   LogEntriesKey,
   LogExistsKey,
 } from '../common/logs';
-import {NUM, STR} from '../common/query_result';
-import {fromNs, TimeSpan, toNsCeil, toNsFloor} from '../common/time';
-import {publishTrackData} from '../frontend/publish';
+import { NUM, STR } from '../common/query_result';
+import { fromPs, TimeSpan, toPsCeil, toPsFloor } from '../common/time';
+import { publishTrackData } from '../frontend/publish';
 
-import {Controller} from './controller';
-import {App} from './globals';
+import { Controller } from './controller';
+import { App } from './globals';
 
 async function updateLogBounds(
-    engine: Engine, span: TimeSpan): Promise<LogBounds> {
-  const vizStartNs = toNsFloor(span.start);
-  const vizEndNs = toNsCeil(span.end);
+  engine: Engine, span: TimeSpan): Promise<LogBounds> {
+  const vizStartPs = toPsFloor(span.start);
+  const vizEndPs = toPsCeil(span.end);
 
   const countResult = await engine.query(`
      select
       ifnull(min(ts), 0) as minTs,
       ifnull(max(ts), 0) as maxTs,
       count(ts) as countTs
-     from android_logs where ts >= ${vizStartNs} and ts <= ${vizEndNs}`);
+     from android_logs where ts >= ${vizStartPs} and ts <= ${vizEndPs}`);
 
-  const countRow = countResult.firstRow({minTs: NUM, maxTs: NUM, countTs: NUM});
+  const countRow = countResult.firstRow({ minTs: NUM, maxTs: NUM, countTs: NUM });
 
-  const firstRowNs = countRow.minTs;
-  const lastRowNs = countRow.maxTs;
+  const firstRowPs = countRow.minTs;
+  const lastRowPs = countRow.maxTs;
   const total = countRow.countTs;
 
   const minResult = await engine.query(`
-     select ifnull(max(ts), 0) as maxTs from android_logs where ts < ${
-      vizStartNs}`);
-  const startNs = minResult.firstRow({maxTs: NUM}).maxTs;
+     select ifnull(max(ts), 0) as maxTs from android_logs where ts < ${vizStartPs}`);
+  const startPs = minResult.firstRow({ maxTs: NUM }).maxTs;
 
   const maxResult = await engine.query(`
-     select ifnull(min(ts), 0) as minTs from android_logs where ts > ${
-      vizEndNs}`);
-  const endNs = maxResult.firstRow({minTs: NUM}).minTs;
+     select ifnull(min(ts), 0) as minTs from android_logs where ts > ${vizEndPs}`);
+  const endPs = maxResult.firstRow({ minTs: NUM }).minTs;
 
-  const startTs = startNs ? fromNs(startNs) : 0;
-  const endTs = endNs ? fromNs(endNs) : Number.MAX_SAFE_INTEGER;
-  const firstRowTs = firstRowNs ? fromNs(firstRowNs) : endTs;
-  const lastRowTs = lastRowNs ? fromNs(lastRowNs) : startTs;
+  const startTs = startPs ? fromPs(startPs) : 0;
+  const endTs = endPs ? fromPs(endPs) : Number.MAX_SAFE_INTEGER;
+  const firstRowTs = firstRowPs ? fromPs(firstRowPs) : endTs;
+  const lastRowTs = lastRowPs ? fromPs(lastRowPs) : startTs;
   return {
     startTs,
     endTs,
@@ -69,11 +67,11 @@ async function updateLogBounds(
 }
 
 async function updateLogEntries(
-    engine: Engine, span: TimeSpan, pagination: Pagination):
-    Promise<LogEntries> {
-  const vizStartNs = toNsFloor(span.start);
-  const vizEndNs = toNsCeil(span.end);
-  const vizSqlBounds = `ts >= ${vizStartNs} and ts <= ${vizEndNs}`;
+  engine: Engine, span: TimeSpan, pagination: Pagination):
+  Promise<LogEntries> {
+  const vizStartPs = toPsFloor(span.start);
+  const vizEndPs = toPsCeil(span.end);
+  const vizSqlBounds = `ts >= ${vizStartPs} and ts <= ${vizEndPs}`;
 
   const rowsResult = await engine.query(`
         select
@@ -92,7 +90,7 @@ async function updateLogEntries(
   const tags = [];
   const messages = [];
 
-  const it = rowsResult.iter({ts: NUM, prio: NUM, tag: STR, msg: STR});
+  const it = rowsResult.iter({ ts: NUM, prio: NUM, tag: STR, msg: STR });
   for (; it.valid(); it.next()) {
     timestamps.push(it.ts);
     priorities.push(it.prio);
@@ -182,7 +180,7 @@ export class LogsController extends Controller<'main'> {
     const result = await this.engine.query(`
       select count(*) as cnt from android_logs
     `);
-    return result.firstRow({cnt: NUM}).cnt > 0;
+    return result.firstRow({ cnt: NUM }).cnt > 0;
   }
 
   run() {
@@ -200,7 +198,7 @@ export class LogsController extends Controller<'main'> {
       return;
     }
 
-    const {offset, count} = pagination;
+    const { offset, count } = pagination;
     const requestedPagination = new Pagination(offset, count);
     const oldPagination = this.pagination;
 

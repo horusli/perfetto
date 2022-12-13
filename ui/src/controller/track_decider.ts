@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {v4 as uuidv4} from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 
-import {assertExists} from '../base/logging';
-import {sqliteString} from '../base/string_utils';
+import { assertExists } from '../base/logging';
+import { sqliteString } from '../base/string_utils';
 import {
   Actions,
   AddTrackArgs,
   DeferredAction,
 } from '../common/actions';
-import {Engine} from '../common/engine';
-import {featureFlags, PERF_SAMPLE_FLAG} from '../common/feature_flags';
+import { Engine } from '../common/engine';
+import { featureFlags, PERF_SAMPLE_FLAG } from '../common/feature_flags';
 import {
   NUM,
   NUM_NULL,
@@ -36,30 +36,30 @@ import {
   TrackSortKey,
   UtidToTrackSortKey,
 } from '../common/state';
-import {ACTUAL_FRAMES_SLICE_TRACK_KIND} from '../tracks/actual_frames';
-import {ANDROID_LOGS_TRACK_KIND} from '../tracks/android_log';
-import {ASYNC_SLICE_TRACK_KIND} from '../tracks/async_slices';
+import { ACTUAL_FRAMES_SLICE_TRACK_KIND } from '../tracks/actual_frames';
+import { ANDROID_LOGS_TRACK_KIND } from '../tracks/android_log';
+import { ASYNC_SLICE_TRACK_KIND } from '../tracks/async_slices';
 import {
   decideTracks as scrollJankDecideTracks,
 } from '../tracks/chrome_scroll_jank';
-import {SLICE_TRACK_KIND} from '../tracks/chrome_slices';
-import {COUNTER_TRACK_KIND, CounterScaleOptions} from '../tracks/counter';
-import {CPU_FREQ_TRACK_KIND} from '../tracks/cpu_freq';
-import {CPU_PROFILE_TRACK_KIND} from '../tracks/cpu_profile';
-import {CPU_SLICE_TRACK_KIND} from '../tracks/cpu_slices';
+import { SLICE_TRACK_KIND } from '../tracks/chrome_slices';
+import { COUNTER_TRACK_KIND, CounterScaleOptions } from '../tracks/counter';
+import { CPU_FREQ_TRACK_KIND } from '../tracks/cpu_freq';
+import { CPU_PROFILE_TRACK_KIND } from '../tracks/cpu_profile';
+import { CPU_SLICE_TRACK_KIND } from '../tracks/cpu_slices';
 import {
   EXPECTED_FRAMES_SLICE_TRACK_KIND,
 } from '../tracks/expected_frames';
-import {HEAP_PROFILE_TRACK_KIND} from '../tracks/heap_profile';
-import {NULL_TRACK_KIND} from '../tracks/null_track';
+import { HEAP_PROFILE_TRACK_KIND } from '../tracks/heap_profile';
+import { NULL_TRACK_KIND } from '../tracks/null_track';
 import {
   PERF_SAMPLES_PROFILE_TRACK_KIND,
 } from '../tracks/perf_samples_profile';
 import {
   PROCESS_SCHEDULING_TRACK_KIND,
 } from '../tracks/process_scheduling';
-import {PROCESS_SUMMARY_TRACK} from '../tracks/process_summary';
-import {THREAD_STATE_TRACK_KIND} from '../tracks/thread_state';
+import { PROCESS_SUMMARY_TRACK } from '../tracks/process_summary';
+import { THREAD_STATE_TRACK_KIND } from '../tracks/thread_state';
 
 const NULL_TRACKS_FLAG = featureFlags.register({
   id: 'nullTracks',
@@ -99,7 +99,7 @@ const COUNTER_REGEX: [RegExp, CounterScaleOptions][] = [
   [new RegExp('^.* (Received|Transmitted) KB$'), 'RATE'],
 ];
 
-function getCounterScale(name: string): CounterScaleOptions|undefined {
+function getCounterScale(name: string): CounterScaleOptions | undefined {
   for (const [re, scale] of COUNTER_REGEX) {
     if (name.match(re)) {
       return scale;
@@ -109,7 +109,7 @@ function getCounterScale(name: string): CounterScaleOptions|undefined {
 }
 
 export async function decideTracks(
-    engineId: string, engine: Engine): Promise<DeferredAction[]> {
+  engineId: string, engine: Engine): Promise<DeferredAction[]> {
   return (new TrackDecider(engineId, engine)).decideTracks();
 }
 
@@ -129,11 +129,11 @@ class TrackDecider {
   static getTrackName(args: Partial<{
     name: string | null,
     utid: number,
-    processName: string|null,
-    pid: number|null,
-    threadName: string|null,
-    tid: number|null,
-    upid: number|null,
+    processName: string | null,
+    pid: number | null,
+    threadName: string | null,
+    tid: number | null,
+    upid: number | null,
     kind: string,
     threadTrack: boolean
   }>) {
@@ -169,7 +169,8 @@ class TrackDecider {
     } else if (hasName) {
       return `${name}`;
     } else if (hasUpid && hasPid && hasProcessName) {
-      return `${processName} ${pid}`;
+      //return `${processName} ${pid}`;
+      return `${processName}`;
     } else if (hasUpid && hasPid) {
       return `Process ${pid}`;
     } else if (hasThreadName && hasTid) {
@@ -231,7 +232,7 @@ class TrackDecider {
     inner join cpu_counter_track t on c.track_id = t.id
     where name = 'cpufreq';
   `);
-    const maxCpuFreq = maxCpuFreqResult.firstRow({freq: NUM}).freq;
+    const maxCpuFreq = maxCpuFreqResult.firstRow({ freq: NUM }).freq;
 
     for (const cpu of cpus) {
       // Only add a cpu freq track if we have
@@ -311,7 +312,7 @@ class TrackDecider {
         kind,
         trackSortKey: PrimaryTrackSortKey.ASYNC_SLICE_TRACK,
         trackGroup: SCROLLING_TRACK_GROUP,
-        name: TrackDecider.getTrackName({name, kind}),
+        name: TrackDecider.getTrackName({ name, kind }),
         config: {
           maxDepth,
           trackIds,
@@ -330,7 +331,7 @@ class TrackDecider {
     where name = 'gpufreq';
   `);
     const maximumValue =
-        maxGpuFreqResult.firstRow({maximumValue: NUM}).maximumValue;
+      maxGpuFreqResult.firstRow({ maximumValue: NUM }).maximumValue;
 
     for (let gpu = 0; gpu < numGpus; gpu++) {
       // Only add a gpu freq track if we have
@@ -342,7 +343,7 @@ class TrackDecider {
       limit 1;
     `);
       if (freqExistsResult.numRows() > 0) {
-        const trackId = freqExistsResult.firstRow({id: NUM}).id;
+        const trackId = freqExistsResult.firstRow({ id: NUM }).id;
         this.tracksToAdd.push({
           engineId: this.engineId,
           kind: COUNTER_TRACK_KIND,
@@ -458,7 +459,7 @@ class TrackDecider {
 
     for (const track of ionTracks) {
       if (!foundSummary &&
-          [MEM_DMA_COUNTER_NAME, MEM_ION].includes(track.name)) {
+        [MEM_DMA_COUNTER_NAME, MEM_ION].includes(track.name)) {
         foundSummary = true;
         track.id = summaryTrackId;
         track.trackGroup = undefined;
@@ -647,8 +648,8 @@ class TrackDecider {
 
   async addLogsTrack(): Promise<void> {
     const result =
-        await this.engine.query(`select count(1) as cnt from android_logs`);
-    const count = result.firstRow({cnt: NUM}).cnt;
+      await this.engine.query(`select count(1) as cnt from android_logs`);
+    const count = result.firstRow({ cnt: NUM }).cnt;
 
     if (count > 0) {
       this.tracksToAdd.push({
@@ -691,7 +692,7 @@ class TrackDecider {
 
       let summaryTrackId = undefined;
       let trackGroupId =
-          upid === 0 ? SCROLLING_TRACK_GROUP : this.upidToUuid.get(upid);
+        upid === 0 ? SCROLLING_TRACK_GROUP : this.upidToUuid.get(upid);
 
       if (groupName) {
         // If this is the first track encountered for a certain group,
@@ -758,16 +759,16 @@ class TrackDecider {
       const name = counterIt.name;
       const upid = counterIt.upid;
       const minimumValue =
-          counterIt.minValue === null ? undefined : counterIt.minValue;
+        counterIt.minValue === null ? undefined : counterIt.minValue;
       const maximumValue =
-          counterIt.maxValue === null ? undefined : counterIt.maxValue;
+        counterIt.maxValue === null ? undefined : counterIt.maxValue;
       this.tracksToAdd.push({
         engineId: this.engineId,
         kind: 'CounterTrack',
         name,
         trackSortKey: PrimaryTrackSortKey.COUNTER_TRACK,
         trackGroup: upid === 0 ? SCROLLING_TRACK_GROUP :
-                                 this.upidToUuid.get(upid),
+          this.upidToUuid.get(upid),
         config: {
           name,
           namespace: 'annotation',
@@ -817,13 +818,13 @@ class TrackDecider {
       this.tracksToAdd.push({
         engineId: this.engineId,
         kind,
-        name: TrackDecider.getTrackName({utid, tid, threadName, kind}),
+        name: TrackDecider.getTrackName({ utid, tid, threadName, kind }),
         trackGroup: uuid,
         trackSortKey: {
           utid,
           priority: InThreadTrackSortKey.THREAD_SCHEDULING_STATE_TRACK,
         },
-        config: {utid, tid},
+        config: { utid, tid },
       });
     }
   }
@@ -864,7 +865,7 @@ class TrackDecider {
         },
         name: `${threadName} (CPU Stack Samples)`,
         trackGroup: uuid,
-        config: {utid},
+        config: { utid },
       });
     }
   }
@@ -908,7 +909,7 @@ class TrackDecider {
       const endTs = it.endTs === null ? undefined : it.endTs;
       const kind = COUNTER_TRACK_KIND;
       const name = TrackDecider.getTrackName(
-          {name: trackName, utid, tid, kind, threadName, threadTrack: true});
+        { name: trackName, utid, tid, kind, threadName, threadTrack: true });
       this.tracksToAdd.push({
         engineId: this.engineId,
         kind,
@@ -970,11 +971,11 @@ class TrackDecider {
       SELECT IFNULL(MAX(layout_depth), 0) as depth
       FROM experimental_slice_layout('${rawTrackIds}');
     `);
-      const maxDepth = depthResult.firstRow({depth: NUM}).depth;
+      const maxDepth = depthResult.firstRow({ depth: NUM }).depth;
 
       const kind = ASYNC_SLICE_TRACK_KIND;
       const name = TrackDecider.getTrackName(
-          {name: trackName, upid, pid, processName, kind});
+        { name: trackName, upid, pid, processName, kind });
       this.tracksToAdd.push({
         engineId: this.engineId,
         kind,
@@ -1032,11 +1033,11 @@ class TrackDecider {
       SELECT IFNULL(MAX(layout_depth), 0) as depth
       FROM experimental_slice_layout('${rawTrackIds}');
     `);
-      const maxDepth = depthResult.firstRow({depth: NUM}).depth;
+      const maxDepth = depthResult.firstRow({ depth: NUM }).depth;
 
       const kind = ACTUAL_FRAMES_SLICE_TRACK_KIND;
       const name = TrackDecider.getTrackName(
-          {name: trackName, upid, pid, processName, kind});
+        { name: trackName, upid, pid, processName, kind });
       this.tracksToAdd.push({
         engineId: this.engineId,
         kind,
@@ -1095,11 +1096,11 @@ class TrackDecider {
       SELECT IFNULL(MAX(layout_depth), 0) as depth
       FROM experimental_slice_layout('${rawTrackIds}');
     `);
-      const maxDepth = depthResult.firstRow({depth: NUM}).depth;
+      const maxDepth = depthResult.firstRow({ depth: NUM }).depth;
 
       const kind = EXPECTED_FRAMES_SLICE_TRACK_KIND;
       const name = TrackDecider.getTrackName(
-          {name: trackName, upid, pid, processName, kind});
+        { name: trackName, upid, pid, processName, kind });
       this.tracksToAdd.push({
         engineId: this.engineId,
         kind,
@@ -1158,7 +1159,7 @@ class TrackDecider {
 
       const kind = SLICE_TRACK_KIND;
       const name = TrackDecider.getTrackName(
-          {name: trackName, utid, tid, threadName, kind});
+        { name: trackName, utid, tid, threadName, kind });
       this.tracksToAdd.push({
         engineId: this.engineId,
         kind,
@@ -1167,8 +1168,8 @@ class TrackDecider {
         trackSortKey: {
           utid,
           priority: isDefaultTrackForScope ?
-              InThreadTrackSortKey.DEFAULT_TRACK :
-              InThreadTrackSortKey.ORDINARY,
+            InThreadTrackSortKey.DEFAULT_TRACK :
+            InThreadTrackSortKey.ORDINARY,
         },
         config: {
           trackId,
@@ -1186,10 +1187,10 @@ class TrackDecider {
           trackSortKey: {
             utid,
             priority: isDefaultTrackForScope ?
-                InThreadTrackSortKey.DEFAULT_TRACK :
-                InThreadTrackSortKey.ORDINARY,
+              InThreadTrackSortKey.DEFAULT_TRACK :
+              InThreadTrackSortKey.ORDINARY,
           },
-          config: {sqlTrackId: trackId},
+          config: { sqlTrackId: trackId },
         });
       }
     }
@@ -1228,13 +1229,13 @@ class TrackDecider {
       const endTs = it.endTs === null ? undefined : it.endTs;
       const kind = COUNTER_TRACK_KIND;
       const name = TrackDecider.getTrackName(
-          {name: trackName, upid, pid, kind, processName});
+        { name: trackName, upid, pid, kind, processName });
       this.tracksToAdd.push({
         engineId: this.engineId,
         kind,
         name,
         trackSortKey: await this.resolveTrackSortKeyForProcessCounterTrack(
-            upid, trackName || undefined),
+          upid, trackName || undefined),
         trackGroup: uuid,
         config: {
           name,
@@ -1253,7 +1254,7 @@ class TrackDecider {
     union
     select distinct(upid) from heap_graph_object
   `);
-    for (const it = result.iter({upid: NUM}); it.valid(); it.next()) {
+    for (const it = result.iter({ upid: NUM }); it.valid(); it.next()) {
       const upid = it.upid;
       const uuid = this.getUuid(0, upid);
       this.tracksToAdd.push({
@@ -1262,7 +1263,7 @@ class TrackDecider {
         trackSortKey: PrimaryTrackSortKey.HEAP_PROFILE_TRACK,
         name: `Heap Profile`,
         trackGroup: uuid,
-        config: {upid},
+        config: { upid },
       });
     }
   }
@@ -1273,7 +1274,7 @@ class TrackDecider {
       from perf_sample join thread using (utid) join process using (upid)
       where callsite_id is not null
   `);
-    for (const it = result.iter({upid: NUM, pid: NUM}); it.valid(); it.next()) {
+    for (const it = result.iter({ upid: NUM, pid: NUM }); it.valid(); it.next()) {
       const upid = it.upid;
       const pid = it.pid;
       const uuid = this.getUuid(0, upid);
@@ -1283,21 +1284,21 @@ class TrackDecider {
         trackSortKey: PrimaryTrackSortKey.PERF_SAMPLES_PROFILE_TRACK,
         name: `Callstacks ${pid}`,
         trackGroup: uuid,
-        config: {upid},
+        config: { upid },
       });
     }
   }
 
-  getUuidUnchecked(utid: number, upid: number|null) {
+  getUuidUnchecked(utid: number, upid: number | null) {
     return upid === null ? this.utidToUuid.get(utid) :
-                           this.upidToUuid.get(upid);
+      this.upidToUuid.get(upid);
   }
 
-  getUuid(utid: number, upid: number|null) {
+  getUuid(utid: number, upid: number | null) {
     return assertExists(this.getUuidUnchecked(utid, upid));
   }
 
-  getOrCreateUuid(utid: number, upid: number|null) {
+  getOrCreateUuid(utid: number, upid: number | null) {
     let uuid = this.getUuidUnchecked(utid, upid);
     if (uuid === undefined) {
       uuid = uuidv4();
@@ -1363,7 +1364,7 @@ class TrackDecider {
       kind: PROCESS_SUMMARY_TRACK,
       trackSortKey: PrimaryTrackSortKey.PROCESS_SUMMARY_TRACK,
       name: `Kernel thread summary`,
-      config: {pidForColor: 2, upid: it.upid, utid: it.utid},
+      config: { pidForColor: 2, upid: it.upid, utid: it.utid },
     });
     const addTrackGroup = Actions.addTrackGroup({
       engineId: this.engineId,
@@ -1522,7 +1523,7 @@ class TrackDecider {
           where arg_set_id = ${it.argSetId}
           and flat_key = 'chrome.process_label'
         `);
-        const argIt = result.iter({label: STR_NULL});
+        const argIt = result.iter({ label: STR_NULL });
         for (; argIt.valid(); argIt.next()) {
           if (argIt.label !== null) {
             labels.push(argIt.label);
@@ -1532,7 +1533,7 @@ class TrackDecider {
 
       // Group by upid if present else by utid.
       let pUuid =
-          upid === null ? this.utidToUuid.get(utid) : this.upidToUuid.get(upid);
+        upid === null ? this.utidToUuid.get(utid) : this.upidToUuid.get(upid);
       // These should only happen once for each track group.
       if (pUuid === undefined) {
         pUuid = this.getOrCreateUuid(utid, upid);
@@ -1540,22 +1541,22 @@ class TrackDecider {
 
         const pidForColor = pid || tid || upid || utid || 0;
         const kind =
-            hasSched ? PROCESS_SCHEDULING_TRACK_KIND : PROCESS_SUMMARY_TRACK;
+          hasSched ? PROCESS_SCHEDULING_TRACK_KIND : PROCESS_SUMMARY_TRACK;
 
         this.tracksToAdd.push({
           id: summaryTrackId,
           engineId: this.engineId,
           kind,
           trackSortKey: hasSched ?
-              PrimaryTrackSortKey.PROCESS_SCHEDULING_TRACK :
-              PrimaryTrackSortKey.PROCESS_SUMMARY_TRACK,
+            PrimaryTrackSortKey.PROCESS_SCHEDULING_TRACK :
+            PrimaryTrackSortKey.PROCESS_SUMMARY_TRACK,
           name: `${upid === null ? tid : pid} summary`,
-          config: {pidForColor, upid, utid, tid},
+          config: { pidForColor, upid, utid, tid },
           labels,
         });
 
         const name = TrackDecider.getTrackName(
-            {utid, processName, pid, threadName, tid, upid});
+          { utid, processName, pid, threadName, tid, upid });
         const addTrackGroup = Actions.addTrackGroup({
           engineId: this.engineId,
           summaryTrackId,
@@ -1613,11 +1614,11 @@ class TrackDecider {
     await this.addAnnotationTracks();
     await this.groupGlobalIonTracks();
     await this.groupGlobalF2fsIostatTracks(
-        F2FS_IOSTAT_TAG, F2FS_IOSTAT_GROUP_NAME);
+      F2FS_IOSTAT_TAG, F2FS_IOSTAT_GROUP_NAME);
     await this.groupGlobalF2fsIostatTracks(
-        F2FS_IOSTAT_LAT_TAG, F2FS_IOSTAT_LAT_GROUP_NAME);
+      F2FS_IOSTAT_LAT_TAG, F2FS_IOSTAT_LAT_GROUP_NAME);
     await this.groupGlobalUfsCmdTagTracks(
-        UFS_CMD_TAG, UFS_CMD_TAG_GROUP_NAME);
+      UFS_CMD_TAG, UFS_CMD_TAG_GROUP_NAME);
     await this.groupGlobalBuddyInfoTracks();
     await this.groupKernelWakelockTracks();
 
@@ -1655,17 +1656,17 @@ class TrackDecider {
         return this.getUuid(utid, upid);
       });
       if (result !== null) {
-        const {tracksToAdd} = await result;
+        const { tracksToAdd } = await result;
         this.tracksToAdd.push(...tracksToAdd);
       }
     }
 
     this.addTrackGroupActions.push(
-        Actions.addTracks({tracks: this.tracksToAdd}));
+      Actions.addTracks({ tracks: this.tracksToAdd }));
 
     const threadOrderingMetadata = await this.computeThreadOrderingMetadata();
     this.addTrackGroupActions.push(
-        Actions.setUtidToTrackSortKey({threadOrderingMetadata}));
+      Actions.setUtidToTrackSortKey({ threadOrderingMetadata }));
 
     return this.addTrackGroupActions;
   }
@@ -1673,7 +1674,7 @@ class TrackDecider {
   // Some process counter tracks are tied to specific threads based on their
   // name.
   private async resolveTrackSortKeyForProcessCounterTrack(
-      upid: number, threadName?: string): Promise<TrackSortKey> {
+    upid: number, threadName?: string): Promise<TrackSortKey> {
     if (threadName !== 'GPU completion') {
       return PrimaryTrackSortKey.COUNTER_TRACK;
     }
@@ -1695,8 +1696,8 @@ class TrackDecider {
   }
 
   private static getThreadSortKey(
-      threadName?: string|null, tid?: number|null,
-      pid?: number|null): PrimaryTrackSortKey {
+    threadName?: string | null, tid?: number | null,
+    pid?: number | null): PrimaryTrackSortKey {
     if (pid !== undefined && pid !== null && pid === tid) {
       return PrimaryTrackSortKey.MAIN_THREAD;
     }
@@ -1706,13 +1707,13 @@ class TrackDecider {
 
     // Chrome main threads should always come first within their process.
     if (threadName === 'CrBrowserMain' || threadName === 'CrRendererMain' ||
-        threadName === 'CrGpuMain') {
+      threadName === 'CrGpuMain') {
       return PrimaryTrackSortKey.MAIN_THREAD;
     }
 
     // Chrome IO threads should always come immediately after the main thread.
     if (threadName === 'Chrome_ChildIOThread' ||
-        threadName === 'Chrome_IOThread') {
+      threadName === 'Chrome_IOThread') {
       return PrimaryTrackSortKey.CHROME_IO_THREAD;
     }
 

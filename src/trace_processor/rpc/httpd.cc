@@ -44,7 +44,20 @@ constexpr int kBindPort = 9001;
 const char* kAllowedCORSOrigins[] = {
     "https://ui.perfetto.dev",
     "http://localhost:10000",
+    "http://localhost:8080/perfetto",
+    "http://localhost:8080/brperfanalyzer",
     "http://127.0.0.1:10000",
+    "http://127.0.0.1:8080/perfetto",
+    "http://127.0.0.1:8080/brperfanalyzer",
+    "http://171.28.150.7:10000",
+    "http://172.28.150.7:8080/perfetto",
+    "http://172.28.150.7:8080/brperfanalyzer",    
+    "http://192.168.2.124:10000",
+    "http://192.168.2.124:8080/perfetto",
+    "http://192.168.2.124:8080/brperfanalyzer",
+    "http://10.10.254.101:10000",
+    "http://10.10.254.101:8080/perfetto",
+    "http://10.10.254.101:8080/brperfanalyzer",
 };
 
 class Httpd : public base::HttpRequestHandler {

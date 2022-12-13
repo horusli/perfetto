@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {colorForTid} from '../../common/colorizer';
-import {PluginContext} from '../../common/plugin_api';
-import {NUM} from '../../common/query_result';
-import {fromNs, toNs} from '../../common/time';
-import {TrackData} from '../../common/track_data';
-import {LIMIT} from '../../common/track_data';
+import { colorForTid } from '../../common/colorizer';
+import { PluginContext } from '../../common/plugin_api';
+import { NUM } from '../../common/query_result';
+import { fromPs, toPs } from '../../common/time';
+import { TrackData } from '../../common/track_data';
+import { LIMIT } from '../../common/track_data';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import {checkerboardExcept} from '../../frontend/checkerboard';
-import {globals} from '../../frontend/globals';
-import {NewTrackArgs, Track} from '../../frontend/track';
+import { checkerboardExcept } from '../../frontend/checkerboard';
+import { globals } from '../../frontend/globals';
+import { NewTrackArgs, Track } from '../../frontend/track';
 
 export const PROCESS_SUMMARY_TRACK = 'ProcessSummaryTrack';
 
@@ -35,7 +35,7 @@ export interface Data extends TrackData {
 
 export interface Config {
   pidForColor: number;
-  upid: number|null;
+  upid: number | null;
   utid: number;
 }
 
@@ -46,39 +46,39 @@ class ProcessSummaryTrackController extends TrackController<Config, Data> {
   private setup = false;
 
   async onBoundsChange(start: number, end: number, resolution: number):
-      Promise<Data> {
-    const startNs = toNs(start);
-    const endNs = toNs(end);
+    Promise<Data> {
+    const startPs = toPs(start);
+    const endPs = toPs(end);
 
     if (this.setup === false) {
       await this.query(
-          `create virtual table ${this.tableName('window')} using window;`);
+        `create virtual table ${this.tableName('window')} using window;`);
 
       let utids = [this.config.utid];
       if (this.config.upid) {
         const threadQuery = await this.query(
-            `select utid from thread where upid=${this.config.upid}`);
+          `select utid from thread where upid=${this.config.upid}`);
         utids = [];
-        for (const it = threadQuery.iter({utid: NUM}); it.valid(); it.next()) {
+        for (const it = threadQuery.iter({ utid: NUM }); it.valid(); it.next()) {
           utids.push(it.utid);
         }
       }
 
       const trackQuery = await this.query(
-          `select id from thread_track where utid in (${utids.join(',')})`);
+        `select id from thread_track where utid in (${utids.join(',')})`);
       const tracks = [];
-      for (const it = trackQuery.iter({id: NUM}); it.valid(); it.next()) {
+      for (const it = trackQuery.iter({ id: NUM }); it.valid(); it.next()) {
         tracks.push(it.id);
       }
 
       const processSliceView = this.tableName('process_slice_view');
       await this.query(
-          `create view ${processSliceView} as ` +
-          // 0 as cpu is a dummy column to perform span join on.
-          `select ts, dur/${utids.length} as dur ` +
-          `from slice s ` +
-          `where depth = 0 and track_id in ` +
-          `(${tracks.join(',')})`);
+        `create view ${processSliceView} as ` +
+        // 0 as cpu is a dummy column to perform span join on.
+        `select ts, dur/${utids.length} as dur ` +
+        `from slice s ` +
+        `where depth = 0 and track_id in ` +
+        `(${tracks.join(',')})`);
       await this.query(`create virtual table ${this.tableName('span')}
           using span_join(${processSliceView},
                           ${this.tableName('window')});`);
@@ -87,31 +87,31 @@ class ProcessSummaryTrackController extends TrackController<Config, Data> {
 
     // |resolution| is in s/px we want # ns for 10px window:
     // Max value with 1 so we don't end up with resolution 0.
-    const bucketSizeNs = Math.max(1, Math.round(resolution * 10 * 1e9));
-    const windowStartNs = Math.floor(startNs / bucketSizeNs) * bucketSizeNs;
-    const windowDurNs = Math.max(1, endNs - windowStartNs);
+    const bucketSizePs = Math.max(1, Math.round(resolution * 10 * 1e12));
+    const windowStartPs = Math.floor(startPs / bucketSizePs) * bucketSizePs;
+    const windowDurPs = Math.max(1, endPs - windowStartPs);
 
     await this.query(`update ${this.tableName('window')} set
-      window_start=${windowStartNs},
-      window_dur=${windowDurNs},
-      quantum=${bucketSizeNs}
+      window_start=${windowStartPs},
+      window_dur=${windowDurPs},
+      quantum=${bucketSizePs}
       where rowid = 0;`);
 
     return this.computeSummary(
-        fromNs(windowStartNs), end, resolution, bucketSizeNs);
+      fromPs(windowStartPs), end, resolution, bucketSizePs);
   }
 
   private async computeSummary(
-      start: number, end: number, resolution: number,
-      bucketSizeNs: number): Promise<Data> {
-    const startNs = toNs(start);
-    const endNs = toNs(end);
+    start: number, end: number, resolution: number,
+    bucketSizePs: number): Promise<Data> {
+    const startPs = toPs(start);
+    const endPs = toPs(end);
     const numBuckets =
-        Math.min(Math.ceil((endNs - startNs) / bucketSizeNs), LIMIT);
+      Math.min(Math.ceil((endPs - startPs) / bucketSizePs), LIMIT);
 
     const query = `select
       quantum_ts as bucket,
-      sum(dur)/cast(${bucketSizeNs} as float) as utilization
+      sum(dur)/cast(${bucketSizePs} as float) as utilization
       from ${this.tableName('span')}
       group by quantum_ts
       limit ${LIMIT}`;
@@ -121,12 +121,12 @@ class ProcessSummaryTrackController extends TrackController<Config, Data> {
       end,
       resolution,
       length: numBuckets,
-      bucketSizeSeconds: fromNs(bucketSizeNs),
+      bucketSizeSeconds: fromPs(bucketSizePs),
       utilizations: new Float64Array(numBuckets),
     };
 
     const queryRes = await this.query(query);
-    const it = queryRes.iter({bucket: NUM, utilization: NUM});
+    const it = queryRes.iter({ bucket: NUM, utilization: NUM });
     for (; it.valid(); it.next()) {
       const bucket = it.bucket;
       if (bucket > numBuckets) {
@@ -167,24 +167,24 @@ class ProcessSummaryTrack extends Track<Config, Data> {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
-    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
+    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
     const data = this.data();
     if (data === undefined) return;  // Can't possibly draw anything.
 
     checkerboardExcept(
-        ctx,
-        this.getHeight(),
-        timeScale.timeToPx(visibleWindowTime.start),
-        timeScale.timeToPx(visibleWindowTime.end),
-        timeScale.timeToPx(data.start),
-        timeScale.timeToPx(data.end));
+      ctx,
+      this.getHeight(),
+      timeScale.timeToPx(visibleWindowTime.start),
+      timeScale.timeToPx(visibleWindowTime.end),
+      timeScale.timeToPx(data.start),
+      timeScale.timeToPx(data.end));
 
     this.renderSummary(ctx, data);
   }
 
   // TODO(dproy): Dedup with CPU slices.
   renderSummary(ctx: CanvasRenderingContext2D, data: Data): void {
-    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
+    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
     const startPx = Math.floor(timeScale.timeToPx(visibleWindowTime.start));
     const bottomY = TRACK_HEIGHT;
 

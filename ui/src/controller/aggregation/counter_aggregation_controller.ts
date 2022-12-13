@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {ColumnDef} from '../../common/aggregation_data';
-import {Engine} from '../../common/engine';
-import {Area, Sorting} from '../../common/state';
-import {toNs} from '../../common/time';
-import {Config, COUNTER_TRACK_KIND} from '../../tracks/counter';
-import {globals} from '../globals';
+import { ColumnDef } from '../../common/aggregation_data';
+import { Engine } from '../../common/engine';
+import { Area, Sorting } from '../../common/state';
+import { toPs } from '../../common/time';
+import { Config, COUNTER_TRACK_KIND } from '../../tracks/counter';
+import { globals } from '../globals';
 
-import {AggregationController} from './aggregation_controller';
+import { AggregationController } from './aggregation_controller';
 
 export class CounterAggregationController extends AggregationController {
   async createAggregateView(engine: Engine, area: Area) {
@@ -42,8 +42,7 @@ export class CounterAggregationController extends AggregationController {
     const query = `create view ${this.kind} as select
     name,
     count(1) as count,
-    round(sum(weighted_value)/${
-        toNs(area.endSec) - toNs(area.startSec)}, 2) as avg_value,
+    round(sum(weighted_value)/${toPs(area.endSec) - toPs(area.startSec)}, 2) as avg_value,
     last as last_value,
     first as first_value,
     max(last) - min(first) as delta_value,
@@ -52,7 +51,7 @@ export class CounterAggregationController extends AggregationController {
     max(value) as max_value
     from
         (select *,
-        (min(ts + dur, ${toNs(area.endSec)}) - max(ts,${toNs(area.startSec)}))
+        (min(ts + dur, ${toPs(area.endSec)}) - max(ts,${toPs(area.startSec)}))
         * value as weighted_value,
         first_value(value) over
         (partition by track_id order by ts) as first,
@@ -61,8 +60,8 @@ export class CounterAggregationController extends AggregationController {
             range between unbounded preceding and unbounded following) as last
         from experimental_counter_dur
         where track_id in (${ids})
-        and ts + dur >= ${toNs(area.startSec)} and
-        ts <= ${toNs(area.endSec)})
+        and ts + dur >= ${toPs(area.startSec)} and
+        ts <= ${toPs(area.endSec)})
     join counter_track
     on track_id = counter_track.id
     group by track_id`;
@@ -132,13 +131,13 @@ export class CounterAggregationController extends AggregationController {
     ];
   }
 
-  async getExtra() {}
+  async getExtra() { }
 
   getTabName() {
     return 'Counters';
   }
 
   getDefaultSorting(): Sorting {
-    return {column: 'name', direction: 'DESC'};
+    return { column: 'name', direction: 'DESC' };
   }
 }

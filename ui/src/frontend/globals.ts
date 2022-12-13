@@ -12,30 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {assertExists} from '../base/logging';
-import {Actions, DeferredAction} from '../common/actions';
-import {AggregateData} from '../common/aggregation_data';
-import {Args, ArgsTree} from '../common/arg_types';
+import { assertExists } from '../base/logging';
+import { Actions, DeferredAction } from '../common/actions';
+import { AggregateData } from '../common/aggregation_data';
+import { Args, ArgsTree } from '../common/arg_types';
 import {
   ConversionJobName,
   ConversionJobStatus,
 } from '../common/conversion_jobs';
-import {createEmptyState} from '../common/empty_state';
-import {Engine} from '../common/engine';
-import {MetricResult} from '../common/metric_data';
-import {CurrentSearchResults, SearchSummary} from '../common/search_data';
-import {CallsiteInfo, EngineConfig, ProfileType, State} from '../common/state';
-import {fromNs, toNs} from '../common/time';
+import { createEmptyState } from '../common/empty_state';
+import { Engine } from '../common/engine';
+import { MetricResult } from '../common/metric_data';
+import { CurrentSearchResults, SearchSummary } from '../common/search_data';
+import { CallsiteInfo, EngineConfig, ProfileType, State } from '../common/state';
+import { fromPs, toPs } from '../common/time';
 
-import {Analytics, initAnalytics} from './analytics';
-import {FrontendLocalState} from './frontend_local_state';
-import {RafScheduler} from './raf_scheduler';
-import {Router} from './router';
-import {ServiceWorkerController} from './service_worker_controller';
+import { Analytics, initAnalytics } from './analytics';
+import { FrontendLocalState } from './frontend_local_state';
+import { RafScheduler } from './raf_scheduler';
+import { Router } from './router';
+import { ServiceWorkerController } from './service_worker_controller';
 
 type Dispatch = (action: DeferredAction) => void;
 type TrackDataStore = Map<string, {}>;
-type QueryResultsStore = Map<string, {}|undefined>;
+type QueryResultsStore = Map<string, {} | undefined>;
 type AggregateDataStore = Map<string, AggregateData>;
 type Description = Map<string, string>;
 
@@ -46,7 +46,7 @@ export interface SliceDetails {
   threadTs?: number;
   threadDur?: number;
   priority?: number;
-  endState?: string|null;
+  endState?: string | null;
   cpu?: number;
   id?: number;
   threadStateId?: number;
@@ -191,7 +191,7 @@ class Globals {
   private _rafScheduler?: RafScheduler = undefined;
   private _serviceWorkerController?: ServiceWorkerController = undefined;
   private _logging?: Analytics = undefined;
-  private _isInternalUser: boolean|undefined = undefined;
+  private _isInternalUser: boolean | undefined = undefined;
 
   // TODO(hjd): Unify trackDataStore, queryResults, overviewStore, threads.
   private _trackDataStore?: TrackDataStore = undefined;
@@ -246,7 +246,7 @@ class Globals {
     this._rafScheduler = new RafScheduler();
     this._serviceWorkerController = new ServiceWorkerController();
     this._testing =
-        self.location && self.location.search.indexOf('testing=1') >= 0;
+      self.location && self.location.search.indexOf('testing=1') >= 0;
     this._logging = initAnalytics();
 
     // TODO(hjd): Unify trackDataStore, queryResults, overviewStore, threads.
@@ -271,7 +271,7 @@ class Globals {
   }
 
   get publishRedraw(): () => void {
-    return this._publishRedraw || (() => {});
+    return this._publishRedraw || (() => { });
   }
 
   set publishRedraw(f: () => void) {
@@ -515,22 +515,22 @@ class Globals {
     if (!isFinite(pxToSec)) {
       // Resolution is in pixels per second so 1000 means 1px = 1ms.
       console.error(`b/186265930: Bad pxToSec suppressed ${pxToSec}`);
-      return fromNs(Math.pow(2, Math.floor(Math.log2(toNs(1000)))));
+      return fromPs(Math.pow(2, Math.floor(Math.log2(toPs(1000)))));
     }
-    const pxToNs = Math.max(toNs(pxToSec), 1);
-    const resolution = fromNs(Math.pow(2, Math.floor(Math.log2(pxToNs))));
-    const log2 = Math.log2(toNs(resolution));
+    const pxToNs = Math.max(toPs(pxToSec), 1);
+    const resolution = fromPs(Math.pow(2, Math.floor(Math.log2(pxToNs))));
+    const log2 = Math.log2(toPs(resolution));
     if (log2 % 1 !== 0) {
       throw new Error(`Resolution should be a power of two.
         pxToSec: ${pxToSec},
         pxToNs: ${pxToNs},
         resolution: ${resolution},
-        log2: ${Math.log2(toNs(resolution))}`);
+        log2: ${Math.log2(toPs(resolution))}`);
     }
     return resolution;
   }
 
-  getCurrentEngine(): EngineConfig|undefined {
+  getCurrentEngine(): EngineConfig | undefined {
     if (!this.state.currentEngineId) {
       return undefined;
     }
@@ -539,9 +539,9 @@ class Globals {
 
   makeSelection(action: DeferredAction<{}>, tabToOpen = 'current_selection') {
     // A new selection should cancel the current search selection.
-    globals.dispatch(Actions.setSearchIndex({index: -1}));
+    globals.dispatch(Actions.setSearchIndex({ index: -1 }));
     const tab = action.type === 'deselect' ? undefined : tabToOpen;
-    globals.dispatch(Actions.setCurrentTab({tab}));
+    globals.dispatch(Actions.setCurrentTab({ tab }));
     globals.dispatch(action);
   }
 

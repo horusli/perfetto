@@ -12,24 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Actions} from '../common/actions';
-import {getContainingTrackId} from '../common/state';
-import {fromNs, TimeSpan, toNs} from '../common/time';
+import { Actions } from '../common/actions';
+import { getContainingTrackId } from '../common/state';
+import { fromPs, TimeSpan, toPs } from '../common/time';
 
-import {globals} from './globals';
+import { globals } from './globals';
 
 const INCOMPLETE_SLICE_TIME_S = 0.00003;
 
 // Given a timestamp, if |ts| is not currently in view move the view to
 // center |ts|, keeping the same zoom level.
 export function horizontalScrollToTs(ts: number) {
-  const startNs = toNs(globals.frontendLocalState.visibleWindowTime.start);
-  const endNs = toNs(globals.frontendLocalState.visibleWindowTime.end);
-  const currentViewNs = endNs - startNs;
-  if (ts < startNs || ts > endNs) {
+  const startPs = toPs(globals.frontendLocalState.visibleWindowTime.start);
+  const endPs = toPs(globals.frontendLocalState.visibleWindowTime.end);
+  const currentViewPs = endPs - startPs;
+  if (ts < startPs || ts > endPs) {
     // TODO(hjd): This is an ugly jump, we should do a smooth pan instead.
     globals.frontendLocalState.updateVisibleTime(new TimeSpan(
-        fromNs(ts - currentViewNs / 2), fromNs(ts + currentViewNs / 2)));
+      fromPs(ts - currentViewPs / 2), fromPs(ts + currentViewPs / 2)));
   }
 }
 
@@ -44,18 +44,18 @@ export function horizontalScrollToTs(ts: number) {
 // - Otherwise, preserve the zoom range.
 export function focusHorizontalRange(startTs: number, endTs: number) {
   const visibleDur = globals.frontendLocalState.visibleWindowTime.end -
-      globals.frontendLocalState.visibleWindowTime.start;
+    globals.frontendLocalState.visibleWindowTime.start;
   let selectDur = endTs - startTs;
   // TODO(altimin): We go from `ts` and `dur` to `startTs` and `endTs` and back
   // to `dur`. We should fix that.
-  if (toNs(selectDur) === -1) {  // Unfinished slice
+  if (toPs(selectDur) === -1) {  // Unfinished slice
     selectDur = INCOMPLETE_SLICE_TIME_S;
     endTs = startTs;
   }
   // If the range is too large to fit on the current zoom level, resize.
   if (selectDur > 0.5 * visibleDur) {
     globals.frontendLocalState.updateVisibleTime(
-        new TimeSpan(startTs - (selectDur * 2), endTs + (selectDur * 2)));
+      new TimeSpan(startTs - (selectDur * 2), endTs + (selectDur * 2)));
     return;
   }
   const midpointTs = (endTs + startTs) / 2;
@@ -75,35 +75,35 @@ export function focusHorizontalRange(startTs: number, endTs: number) {
     newEndTs = globals.state.traceTime.startSec + visibleDur;
   }
 
-  const newStartNs = toNs(newStartTs);
-  const newEndNs = toNs(newEndTs);
+  const newStartPs = toPs(newStartTs);
+  const newEndPs = toPs(newEndTs);
 
-  const viewStartNs = toNs(globals.frontendLocalState.visibleWindowTime.start);
-  const viewEndNs = toNs(globals.frontendLocalState.visibleWindowTime.end);
+  const viewStartPs = toPs(globals.frontendLocalState.visibleWindowTime.start);
+  const viewEndPs = toPs(globals.frontendLocalState.visibleWindowTime.end);
 
   // If preserving the zoom doesn't change the visible window, update the zoom
   // level.
-  if (newStartNs === viewStartNs && newEndNs === viewEndNs) {
+  if (newStartPs === viewStartPs && newEndPs === viewEndPs) {
     globals.frontendLocalState.updateVisibleTime(
-        new TimeSpan(startTs - (selectDur * 2), endTs + (selectDur * 2)));
+      new TimeSpan(startTs - (selectDur * 2), endTs + (selectDur * 2)));
     return;
   }
   globals.frontendLocalState.updateVisibleTime(
-      new TimeSpan(newStartTs, newEndTs));
+    new TimeSpan(newStartTs, newEndTs));
 }
 
 // Given a track id, find a track with that id and scroll it into view. If the
 // track is nested inside a track group, scroll to that track group instead.
 // If |openGroup| then open the track group and scroll to the track.
 export function verticalScrollToTrack(
-    trackId: string|number, openGroup = false) {
+  trackId: string | number, openGroup = false) {
   const trackIdString = `${trackId}`;
   const track = document.querySelector('#track_' + trackIdString);
 
   if (track) {
     // block: 'nearest' means that it will only scroll if the track is not
     // currently in view.
-    track.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    track.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return;
   }
 
@@ -123,17 +123,17 @@ export function verticalScrollToTrack(
   if (openGroup) {
     // After the track exists in the dom, it will be scrolled to.
     globals.frontendLocalState.scrollToTrackId = trackId;
-    globals.dispatch(Actions.toggleTrackGroupCollapsed({trackGroupId}));
+    globals.dispatch(Actions.toggleTrackGroupCollapsed({ trackGroupId }));
     return;
   } else {
-    trackGroup.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    trackGroup.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 
 
 // Scroll vertically and horizontally to reach track (|trackId|) at |ts|.
 export function scrollToTrackAndTs(
-    trackId: string|number|undefined, ts: number, openGroup = false) {
+  trackId: string | number | undefined, ts: number, openGroup = false) {
   if (trackId !== undefined) {
     verticalScrollToTrack(trackId, openGroup);
   }

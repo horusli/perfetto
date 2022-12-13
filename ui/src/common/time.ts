@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {assertTrue} from '../base/logging';
+import { assertTrue } from '../base/logging';
 
 const EPSILON = 0.0000000001;
 
 // TODO(hjd): Combine with timeToCode.
 export function timeToString(sec: number) {
-  const units = ['s', 'ms', 'us', 'ns'];
+  const units = ['s', 'ms', 'us', 'ns', 'ps'];
   const sign = Math.sign(sec);
   let n = Math.abs(sec);
   let u = 0;
@@ -29,25 +29,41 @@ export function timeToString(sec: number) {
   return `${sign < 0 ? '-' : ''}${Math.round(n * 10) / 10} ${units[u]}`;
 }
 
-export function fromNs(ns: number) {
-  return ns / 1e9;
+//export function fromNs(ns: number) {
+//  return ns / 1e9;
+//}
+
+//export function toNsFloor(seconds: number) {
+//  return Math.floor(seconds * 1e9);
+//}
+
+//export function toNsCeil(seconds: number) {
+//  return Math.ceil(seconds * 1e9);
+//}
+
+//export function toNs(seconds: number) {
+//  return Math.round(seconds * 1e9);
+//}
+
+export function fromPs(ps: number) {
+  return ps / 1e12;
 }
 
-export function toNsFloor(seconds: number) {
-  return Math.floor(seconds * 1e9);
+export function toPsFloor(seconds: number) {
+  return Math.floor(seconds * 1e12);
 }
 
-export function toNsCeil(seconds: number) {
-  return Math.ceil(seconds * 1e9);
+export function toPsCeil(seconds: number) {
+  return Math.ceil(seconds * 1e12);
 }
 
-export function toNs(seconds: number) {
-  return Math.round(seconds * 1e9);
+export function toPs(seconds: number) {
+  return Math.round(seconds * 1e12);
 }
 
 // 1000000023ns -> "1.000 000 023"
 export function formatTimestamp(sec: number) {
-  const parts = sec.toFixed(9).split('.');
+  const parts = sec.toFixed(12).split('.');
   parts[1] = parts[1].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   return parts.join('.');
 }
@@ -56,21 +72,22 @@ export function formatTimestamp(sec: number) {
 // 1000000023ns -> "1s 23ns"
 export function timeToCode(sec: number): string {
   let result = '';
-  let ns = Math.round(sec * 1e9);
-  if (ns < 1) return '0s';
+  let ps = Math.round(sec * 1e12);
+  if (ps < 1) return '0s';
   const unitAndValue = [
-    ['m', 60000000000],
-    ['s', 1000000000],
-    ['ms', 1000000],
-    ['us', 1000],
-    ['ns', 1],
+    ['m', 60000000000000],
+    ['s', 1000000000000],
+    ['ms', 1000000000],
+    ['us', 1000000],
+    ['ns', 1000],
+    ['ps', 1],
   ];
   unitAndValue.forEach((pair) => {
     const unit = pair[0] as string;
     const val = pair[1] as number;
-    if (ns >= val) {
-      const i = Math.floor(ns / val);
-      ns -= i * val;
+    if (ps >= val) {
+      const i = Math.floor(ps / val);
+      ps -= i * val;
       result += i.toLocaleString() + unit + ' ';
     }
   });
@@ -79,8 +96,7 @@ export function timeToCode(sec: number): string {
 
 export function currentDateHourAndMinute(): string {
   const date = new Date();
-  return `${date.toISOString().substr(0, 10)}-${date.getHours()}-${
-      date.getMinutes()}`;
+  return `${date.toISOString().substr(0, 10)}-${date.getHours()}-${date.getMinutes()}`;
 }
 
 export class TimeSpan {
@@ -99,7 +115,7 @@ export class TimeSpan {
 
   equals(other: TimeSpan): boolean {
     return Math.abs(this.start - other.start) < EPSILON &&
-        Math.abs(this.end - other.end) < EPSILON;
+      Math.abs(this.end - other.end) < EPSILON;
   }
 
   get duration() {

@@ -24,7 +24,7 @@ import {featureFlags, Flag, PERF_SAMPLE_FLAG} from '../common/feature_flags';
 import {HttpRpcEngine} from '../common/http_rpc_engine';
 import {NUM, NUM_NULL, QueryError, STR, STR_NULL} from '../common/query_result';
 import {defaultTraceTime, EngineMode, ProfileType} from '../common/state';
-import {TimeSpan, toNs, toNsCeil, toNsFloor} from '../common/time';
+import {TimeSpan, toPs, toPsCeil, toPsFloor} from '../common/time';
 import {resetEngineWorker, WasmEngineProxy} from '../common/wasm_engine_proxy';
 import {
   globals as frontendGlobals,
@@ -480,8 +480,8 @@ export class TraceController extends Controller<States> {
     if (profile.numRows() !== 1) return;
     const row = profile.firstRow({upid: NUM});
     const upid = row.upid;
-    const leftTs = toNs(globals.state.traceTime.startSec);
-    const rightTs = toNs(globals.state.traceTime.endSec);
+    const leftTs = toPs(globals.state.traceTime.startSec);
+    const rightTs = toPs(globals.state.traceTime.endSec);
     globals.dispatch(Actions.selectPerfSamples(
         {id: 0, upid, leftTs, rightTs, type: ProfileType.PERF_SAMPLE}));
   }
@@ -560,14 +560,14 @@ export class TraceController extends Controller<States> {
         'Loading overview ' +
         `${Math.round((step + 1) / numSteps * 1000) / 10}%`);
       const startSec = traceTime.start + step * stepSec;
-      const startNs = toNsFloor(startSec);
+      const startPs = toPsFloor(startSec);
       const endSec = startSec + stepSec;
-      const endNs = toNsCeil(endSec);
+      const endPs = toPsCeil(endSec);
 
       // Sched overview.
       const schedResult = await engine.query(
-        `select sum(dur)/${stepSec}/1e9 as load, cpu from sched ` +
-        `where ts >= ${startNs} and ts < ${endNs} and utid != 0 ` +
+        `select sum(dur)/${stepSec}/1e12 as load, cpu from sched ` +
+        `where ts >= ${startPs} and ts < ${endPs} and utid != 0 ` +
         'group by cpu order by cpu');
       const schedData: { [key: string]: QuantizedLoad } = {};
       const it = schedResult.iter({load: NUM, cpu: NUM});
@@ -585,16 +585,16 @@ export class TraceController extends Controller<States> {
     }
 
     // Slices overview.
-    const traceStartNs = toNs(traceTime.start);
-    const stepSecNs = toNs(stepSec);
+    const traceStartPs = toPs(traceTime.start);
+    const stepSecPs = toPs(stepSec);
     const sliceResult = await engine.query(`select
            bucket,
            upid,
-           ifnull(sum(utid_sum) / cast(${stepSecNs} as float), 0) as load
+           ifnull(sum(utid_sum) / cast(${stepSecPs} as float), 0) as load
          from thread
          inner join (
            select
-             ifnull(cast((ts - ${traceStartNs})/${stepSecNs} as int), 0) as bucket,
+             ifnull(cast((ts - ${traceStartPs})/${stepSecPs} as int), 0) as bucket,
              sum(dur) as utid_sum,
              utid
            from slice
@@ -834,7 +834,7 @@ async function computeTraceReliableRangeStart(engine: Engine): Promise<number> {
       await engine.query(`SELECT RUN_METRIC('chrome/chrome_reliable_range.sql');
        SELECT start FROM chrome_reliable_range`);
   const bounds = result.firstRow({start: NUM});
-  return bounds.start / 1e9;
+  return bounds.start / 1e12;
 }
 
 async function computeVisibleTime(

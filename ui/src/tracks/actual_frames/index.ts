@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {PluginContext} from '../../common/plugin_api';
-import {NUM, NUM_NULL, STR} from '../../common/query_result';
-import {fromNs, toNs} from '../../common/time';
-import {TrackData} from '../../common/track_data';
-import {TrackController} from '../../controller/track_controller';
-import {NewTrackArgs, Track} from '../../frontend/track';
-import {ChromeSliceTrack} from '../chrome_slices';
+import { PluginContext } from '../../common/plugin_api';
+import { NUM, NUM_NULL, STR } from '../../common/query_result';
+import { fromPs, toPs } from '../../common/time';
+import { TrackData } from '../../common/track_data';
+import { TrackController } from '../../controller/track_controller';
+import { NewTrackArgs, Track } from '../../frontend/track';
+import { ChromeSliceTrack } from '../chrome_slices';
 
 export const ACTUAL_FRAMES_SLICE_TRACK_KIND = 'ActualFramesSliceTrack';
 
@@ -49,20 +49,20 @@ const PINK_COLOR = '#F515E0';         // Pink 500
 
 class ActualFramesSliceTrackController extends TrackController<Config, Data> {
   static readonly kind = ACTUAL_FRAMES_SLICE_TRACK_KIND;
-  private maxDurNs = 0;
+  private maxDurPs = 0;
 
   async onBoundsChange(start: number, end: number, resolution: number):
-      Promise<Data> {
-    const startNs = toNs(start);
-    const endNs = toNs(end);
+    Promise<Data> {
+    const startPs = toPs(start);
+    const endPs = toPs(end);
 
     const pxSize = this.pxSize();
 
     // ns per quantization bucket (i.e. ns per pixel). /2 * 2 is to force it to
     // be an even number, so we can snap in the middle.
-    const bucketNs = Math.max(Math.round(resolution * 1e9 * pxSize / 2) * 2, 1);
+    const bucketPs = Math.max(Math.round(resolution * 1e12 * pxSize / 2) * 2, 1);
 
-    if (this.maxDurNs === 0) {
+    if (this.maxDurPs === 0) {
       const maxDurResult = await this.query(`
         select
           max(iif(dur = -1, (SELECT end_ts FROM trace_bounds) - ts, dur))
@@ -70,12 +70,12 @@ class ActualFramesSliceTrackController extends TrackController<Config, Data> {
         from experimental_slice_layout
         where filter_track_ids = '${this.config.trackIds.join(',')}'
       `);
-      this.maxDurNs = maxDurResult.firstRow({maxDur: NUM_NULL}).maxDur || 0;
+      this.maxDurPs = maxDurResult.firstRow({ maxDur: NUM_NULL }).maxDur || 0;
     }
 
     const rawResult = await this.query(`
       SELECT
-        (s.ts + ${bucketNs / 2}) / ${bucketNs} * ${bucketNs} as tsq,
+        (s.ts + ${bucketPs / 2}) / ${bucketPs} * ${bucketPs} as tsq,
         s.ts as ts,
         max(iif(s.dur = -1, (SELECT end_ts FROM trace_bounds) - s.ts, s.dur))
             as dur,
@@ -97,8 +97,8 @@ class ActualFramesSliceTrackController extends TrackController<Config, Data> {
       join actual_frame_timeline_slice afs using(id)
       where
         filter_track_ids = '${this.config.trackIds.join(',')}' and
-        s.ts >= ${startNs - this.maxDurNs} and
-        s.ts <= ${endNs}
+        s.ts >= ${startPs - this.maxDurPs} and
+        s.ts <= ${endPs}
       group by tsq, s.layout_depth
       order by tsq, s.layout_depth
     `);
@@ -142,16 +142,16 @@ class ActualFramesSliceTrackController extends TrackController<Config, Data> {
       'color': STR,
     });
     for (let i = 0; it.valid(); i++, it.next()) {
-      const startNsQ = it.tsq;
-      const startNs = it.ts;
-      const durNs = it.dur;
-      const endNs = startNs + durNs;
+      const startPsQ = it.tsq;
+      const startPs = it.ts;
+      const durPs = it.dur;
+      const endPs = startPs + durPs;
 
-      let endNsQ = Math.floor((endNs + bucketNs / 2 - 1) / bucketNs) * bucketNs;
-      endNsQ = Math.max(endNsQ, startNsQ + bucketNs);
+      let endPsQ = Math.floor((endPs + bucketPs / 2 - 1) / bucketPs) * bucketPs;
+      endPsQ = Math.max(endPsQ, startPsQ + bucketPs);
 
-      slices.starts[i] = fromNs(startNsQ);
-      slices.ends[i] = fromNs(endNsQ);
+      slices.starts[i] = fromPs(startPsQ);
+      slices.ends[i] = fromPs(endPsQ);
       slices.depths[i] = it.layoutDepth;
       slices.titles[i] = internString(it.name);
       slices.colors![i] = internString(it.color);

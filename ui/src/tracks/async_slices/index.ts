@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {PluginContext} from '../../common/plugin_api';
-import {NUM, NUM_NULL, STR} from '../../common/query_result';
-import {fromNs, toNs} from '../../common/time';
-import {TrackData} from '../../common/track_data';
+import { PluginContext } from '../../common/plugin_api';
+import { NUM, NUM_NULL, STR } from '../../common/query_result';
+import { fromPs, toPs } from '../../common/time';
+import { TrackData } from '../../common/track_data';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import {NewTrackArgs, Track} from '../../frontend/track';
-import {ChromeSliceTrack} from '../chrome_slices';
+import { NewTrackArgs, Track } from '../../frontend/track';
+import { ChromeSliceTrack } from '../chrome_slices';
 
 export const ASYNC_SLICE_TRACK_KIND = 'AsyncSliceTrack';
 
@@ -43,31 +43,31 @@ export interface Data extends TrackData {
 
 class AsyncSliceTrackController extends TrackController<Config, Data> {
   static readonly kind = ASYNC_SLICE_TRACK_KIND;
-  private maxDurNs = 0;
+  private maxDurPs = 0;
 
   async onBoundsChange(start: number, end: number, resolution: number):
-      Promise<Data> {
-    const startNs = toNs(start);
-    const endNs = toNs(end);
+    Promise<Data> {
+    const startPs = toPs(start);
+    const endPs = toPs(end);
 
     const pxSize = this.pxSize();
 
     // ns per quantization bucket (i.e. ns per pixel). /2 * 2 is to force it to
     // be an even number, so we can snap in the middle.
-    const bucketNs = Math.max(Math.round(resolution * 1e9 * pxSize / 2) * 2, 1);
+    const bucketPs = Math.max(Math.round(resolution * 1e12 * pxSize / 2) * 2, 1);
 
-    if (this.maxDurNs === 0) {
+    if (this.maxDurPs === 0) {
       const maxDurResult = await this.query(`
         select max(iif(dur = -1, (SELECT end_ts FROM trace_bounds) - ts, dur))
         as maxDur from experimental_slice_layout
         where filter_track_ids = '${this.config.trackIds.join(',')}'
       `);
-      this.maxDurNs = maxDurResult.firstRow({maxDur: NUM_NULL}).maxDur || 0;
+      this.maxDurPs = maxDurResult.firstRow({ maxDur: NUM_NULL }).maxDur || 0;
     }
 
     const queryRes = await this.query(`
       SELECT
-        (ts + ${bucketNs / 2}) / ${bucketNs} * ${bucketNs} as tsq,
+        (ts + ${bucketPs / 2}) / ${bucketPs} * ${bucketPs} as tsq,
         ts,
         max(iif(dur = -1, (SELECT end_ts FROM trace_bounds) - ts, dur)) as dur,
         layout_depth as depth,
@@ -78,8 +78,8 @@ class AsyncSliceTrackController extends TrackController<Config, Data> {
       from experimental_slice_layout
       where
         filter_track_ids = '${this.config.trackIds.join(',')}' and
-        ts >= ${startNs - this.maxDurNs} and
-        ts <= ${endNs}
+        ts >= ${startPs - this.maxDurPs} and
+        ts <= ${endPs}
       group by tsq, layout_depth
       order by tsq, layout_depth
     `);
@@ -121,16 +121,16 @@ class AsyncSliceTrackController extends TrackController<Config, Data> {
       isIncomplete: NUM,
     });
     for (let row = 0; it.valid(); it.next(), row++) {
-      const startNsQ = it.tsq;
-      const startNs = it.ts;
-      const durNs = it.dur;
-      const endNs = startNs + durNs;
+      const startPsQ = it.tsq;
+      const startPs = it.ts;
+      const durPs = it.dur;
+      const endPs = startPs + durPs;
 
-      let endNsQ = Math.floor((endNs + bucketNs / 2 - 1) / bucketNs) * bucketNs;
-      endNsQ = Math.max(endNsQ, startNsQ + bucketNs);
+      let endPsQ = Math.floor((endPs + bucketPs / 2 - 1) / bucketPs) * bucketPs;
+      endPsQ = Math.max(endPsQ, startPsQ + bucketPs);
 
-      slices.starts[row] = fromNs(startNsQ);
-      slices.ends[row] = fromNs(endNsQ);
+      slices.starts[row] = fromPs(startPsQ);
+      slices.ends[row] = fromPs(endPsQ);
       slices.depths[row] = it.depth;
       slices.titles[row] = internString(it.name);
       slices.sliceIds[row] = it.id;

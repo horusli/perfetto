@@ -124,11 +124,11 @@ export class LogPanel extends Panel<{}> {
               {
                 'class': isStale ? 'stale' : '',
                 'style': {top: `${(offset + i) * ROW_H}px`},
-                'onmouseover': this.onRowOver.bind(this, ts / 1e9),
+                'onmouseover': this.onRowOver.bind(this, ts / 1e12),
                 'onmouseout': this.onRowOut.bind(this),
               },
               m('.cell',
-                formatTimestamp(ts / 1e9 - globals.state.traceTime.startSec)),
+                formatTimestamp(ts / 1e12 - globals.state.traceTime.startSec)),
               m('.cell', priorityLetter || '?'),
               m('.cell', tags[i]),
               m('.cell', messages[i]),

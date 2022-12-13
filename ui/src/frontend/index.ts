@@ -12,41 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Patch, produce} from 'immer';
+import { Patch, produce } from 'immer';
 import * as m from 'mithril';
 
-import {defer} from '../base/deferred';
-import {assertExists, reportError, setErrorHandler} from '../base/logging';
-import {Actions, DeferredAction, StateActions} from '../common/actions';
-import {createEmptyState} from '../common/empty_state';
-import {RECORDING_V2_FLAG} from '../common/feature_flags';
-import {initializeImmerJs} from '../common/immer_init';
-import {PluginContextImpl, pluginRegistry} from '../common/plugins';
-import {State} from '../common/state';
-import {initWasm} from '../common/wasm_engine_proxy';
-import {ControllerWorkerInitMessage} from '../common/worker_messages';
+import { defer } from '../base/deferred';
+import { assertExists, reportError, setErrorHandler } from '../base/logging';
+import { Actions, DeferredAction, StateActions } from '../common/actions';
+import { createEmptyState } from '../common/empty_state';
+import { RECORDING_V2_FLAG } from '../common/feature_flags';
+import { initializeImmerJs } from '../common/immer_init';
+import { PluginContextImpl, pluginRegistry } from '../common/plugins';
+import { State } from '../common/state';
+import { initWasm } from '../common/wasm_engine_proxy';
+import { ControllerWorkerInitMessage } from '../common/worker_messages';
 import {
   isGetCategoriesResponse,
 } from '../controller/chrome_proxy_record_controller';
-import {initController} from '../controller/index';
+import { initController } from '../controller/index';
 
-import {AnalyzePage} from './analyze_page';
-import {initCssConstants} from './css_constants';
-import {maybeShowErrorDialog} from './error_dialog';
-import {installFileDropHandler} from './file_drop_handler';
-import {FlagsPage} from './flags_page';
-import {globals} from './globals';
-import {HomePage} from './home_page';
-import {initLiveReloadIfLocalhost} from './live_reload';
-import {MetricsPage} from './metrics_page';
-import {postMessageHandler} from './post_message_handler';
-import {RecordPage, updateAvailableAdbDevices} from './record_page';
-import {RecordPageV2} from './record_page_v2';
-import {Router} from './router';
-import {CheckHttpRpcConnection} from './rpc_http_dialog';
-import {TraceInfoPage} from './trace_info_page';
-import {maybeOpenTraceFromRoute} from './trace_url_handler';
-import {ViewerPage} from './viewer_page';
+import { AnalyzePage } from './analyze_page';
+import { initCssConstants } from './css_constants';
+import { maybeShowErrorDialog } from './error_dialog';
+import { installFileDropHandler } from './file_drop_handler';
+import { FlagsPage } from './flags_page';
+import { globals } from './globals';
+import { HomePage } from './home_page';
+import { initLiveReloadIfLocalhost } from './live_reload';
+import { MetricsPage } from './metrics_page';
+import { postMessageHandler } from './post_message_handler';
+import { RecordPage, updateAvailableAdbDevices } from './record_page';
+import { RecordPageV2 } from './record_page_v2';
+import { Router } from './router';
+import { CheckHttpRpcConnection } from './rpc_http_dialog';
+import { TraceInfoPage } from './trace_info_page';
+import { maybeOpenTraceFromRoute } from './trace_url_handler';
+import { ViewerPage } from './viewer_page';
 
 const EXTENSION_ID = 'lfmkphfpdbjijhpomgecfikhfohaoine';
 
@@ -87,7 +87,7 @@ class FrontendApi {
     let key: keyof State;
     for (key in this.state) {
       if (key !== 'frontendLocalState' && key !== 'visibleTracks' &&
-          oldState[key] !== this.state[key]) {
+        oldState[key] !== this.state[key]) {
         globals.rafScheduler.scheduleFullRedraw();
         break;
       }
@@ -105,17 +105,17 @@ class FrontendApi {
     // all imperative mutations of the state done in the callback into
     // immutable changes to the returned state.
     this.state = produce(
-        this.state,
-        (draft) => {
-          (StateActions as any)[action.type](draft, action.args);
-        },
-        (morePatches, _) => {
-          const originalLength = patches.length;
-          patches.length += morePatches.length;
-          for (let i = 0; i < morePatches.length; ++i) {
-            patches[i + originalLength] = morePatches[i];
-          }
-        });
+      this.state,
+      (draft) => {
+        (StateActions as any)[action.type](draft, action.args);
+      },
+      (morePatches, _) => {
+        const originalLength = patches.length;
+        patches.length += morePatches.length;
+        for (let i = 0; i < morePatches.length; ++i) {
+          patches[i + originalLength] = morePatches[i];
+        }
+      });
     return patches;
   }
 }
@@ -198,7 +198,7 @@ function main() {
   // and initialize GA after that (or after a timeout if something goes wrong).
   const script = document.createElement('script');
   script.src =
-      'https://storage.cloud.google.com/perfetto-ui-internal/is_internal_user.js';
+    'https://storage.cloud.google.com/perfetto-ui-internal/is_internal_user.js';
   script.async = true;
   script.onerror = () => globals.logging.initialize();
   script.onload = () => globals.logging.initialize();
@@ -216,7 +216,7 @@ function main() {
   const errorReportingChannel = new MessageChannel();
 
   errorReportingChannel.port2.onmessage = (e) =>
-      maybeShowErrorDialog(`${e.data}`);
+    maybeShowErrorDialog(`${e.data}`);
 
   const msg: ControllerWorkerInitMessage = {
     controllerPort: controllerChannel.port1,
@@ -255,8 +255,8 @@ function main() {
   // We proxy messages between the extension and the controller because the
   // controller's worker can't access chrome.runtime.
   const extensionPort = window.chrome && chrome.runtime ?
-      chrome.runtime.connect(EXTENSION_ID) :
-      undefined;
+    chrome.runtime.connect(EXTENSION_ID) :
+    undefined;
 
   setExtensionAvailability(extensionPort !== undefined);
 
@@ -267,29 +267,29 @@ function main() {
     });
     // This forwards the messages from the extension to the controller.
     extensionPort.onMessage.addListener(
-        (message: object, _port: chrome.runtime.Port) => {
-          if (isGetCategoriesResponse(message)) {
-            globals.dispatch(Actions.setChromeCategories(message));
-            return;
-          }
-          extensionLocalChannel.port2.postMessage(message);
-        });
+      (message: object, _port: chrome.runtime.Port) => {
+        if (isGetCategoriesResponse(message)) {
+          globals.dispatch(Actions.setChromeCategories(message));
+          return;
+        }
+        extensionLocalChannel.port2.postMessage(message);
+      });
   }
 
   // This forwards the messages from the controller to the extension
-  extensionLocalChannel.port2.onmessage = ({data}) => {
+  extensionLocalChannel.port2.onmessage = ({ data }) => {
     if (extensionPort) extensionPort.postMessage(data);
   };
 
   // Put these variables in the global scope for better debugging.
-  (window as {} as {m: {}}).m = m;
-  (window as {} as {globals: {}}).globals = globals;
-  (window as {} as {Actions: {}}).Actions = Actions;
+  (window as {} as { m: {} }).m = m;
+  (window as {} as { globals: {} }).globals = globals;
+  (window as {} as { Actions: {} }).Actions = Actions;
 
   // Prevent pinch zoom.
   document.body.addEventListener('wheel', (e: MouseEvent) => {
     if (e.ctrlKey) e.preventDefault();
-  }, {passive: false});
+  }, { passive: false });
 
   cssLoadPromise.then(() => onCssLoaded());
 
@@ -323,9 +323,9 @@ function onCssLoaded() {
     updateAvailableAdbDevices();
     try {
       navigator.usb.addEventListener(
-          'connect', () => updateAvailableAdbDevices());
+        'connect', () => updateAvailableAdbDevices());
       navigator.usb.addEventListener(
-          'disconnect', () => updateAvailableAdbDevices());
+        'disconnect', () => updateAvailableAdbDevices());
     } catch (e) {
       console.error('WebUSB API not supported');
     }
@@ -348,7 +348,7 @@ function onCssLoaded() {
     }
 
     // Add support for opening traces from postMessage().
-    window.addEventListener('message', postMessageHandler, {passive: true});
+    window.addEventListener('message', postMessageHandler, { passive: true });
 
     // Handles the initial ?local_cache_key=123 or ?s=permalink or ?url=...
     // cases.

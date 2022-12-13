@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {sqliteString} from '../base/string_utils';
-import {TRACE_MARGIN_TIME_S} from '../common/constants';
-import {Engine} from '../common/engine';
-import {NUM, STR} from '../common/query_result';
-import {CurrentSearchResults, SearchSummary} from '../common/search_data';
-import {TimeSpan} from '../common/time';
-import {publishSearch, publishSearchResult} from '../frontend/publish';
+import { sqliteString } from '../base/string_utils';
+import { TRACE_MARGIN_TIME_S } from '../common/constants';
+import { Engine } from '../common/engine';
+import { NUM, STR } from '../common/query_result';
+import { CurrentSearchResults, SearchSummary } from '../common/search_data';
+import { TimeSpan } from '../common/time';
+import { publishSearch, publishSearchResult } from '../frontend/publish';
 
-import {Controller} from './controller';
-import {App} from './globals';
+import { Controller } from './controller';
+import { App } from './globals';
 
 export function escapeQuery(s: string): string {
   // See https://www.sqlite.org/lang_expr.html#:~:text=A%20string%20constant
@@ -78,20 +78,20 @@ export class SearchController extends Controller<'main'> {
     const visibleState = this.app.state.frontendLocalState.visibleState;
     const omniboxState = this.app.state.frontendLocalState.omniboxState;
     if (visibleState === undefined || omniboxState === undefined ||
-        omniboxState.mode === 'COMMAND') {
+      omniboxState.mode === 'COMMAND') {
       return;
     }
     const newSpan = new TimeSpan(visibleState.startSec, visibleState.endSec);
     const newSearch = omniboxState.omnibox;
     let newResolution = visibleState.resolution;
     if (this.previousSpan.contains(newSpan) &&
-        this.previousResolution === newResolution &&
-        newSearch === this.previousSearch) {
+      this.previousResolution === newResolution &&
+      newSearch === this.previousSearch) {
       return;
     }
     this.previousSpan = new TimeSpan(
-        Math.max(newSpan.start - newSpan.duration, -TRACE_MARGIN_TIME_S),
-        newSpan.end + newSpan.duration);
+      Math.max(newSpan.start - newSpan.duration, -TRACE_MARGIN_TIME_S),
+      newSpan.end + newSpan.duration);
     this.previousResolution = newResolution;
     this.previousSearch = newSearch;
     if (newSearch === '' || newSearch.length < 4) {
@@ -111,54 +111,54 @@ export class SearchController extends Controller<'main'> {
       return;
     }
 
-    let startNs = Math.round(newSpan.start * 1e9);
-    let endNs = Math.round(newSpan.end * 1e9);
+    let startPs = Math.round(newSpan.start * 1e12);
+    let endPs = Math.round(newSpan.end * 1e12);
 
     // TODO(hjd): We shouldn't need to be so defensive here:
-    if (!Number.isFinite(startNs)) {
-      startNs = 0;
+    if (!Number.isFinite(startPs)) {
+      startPs = 0;
     }
-    if (!Number.isFinite(endNs)) {
-      endNs = 1;
+    if (!Number.isFinite(endPs)) {
+      endPs = 1;
     }
     if (!Number.isFinite(newResolution)) {
       newResolution = 1;
     }
 
     this.updateInProgress = true;
-    const computeSummary = this.update(newSearch, startNs, endNs, newResolution)
-                               .then((summary) => {
-                                 publishSearch(summary);
-                               });
+    const computeSummary = this.update(newSearch, startPs, endPs, newResolution)
+      .then((summary) => {
+        publishSearch(summary);
+      });
 
     const computeResults =
-        this.specificSearch(newSearch).then((searchResults) => {
-          publishSearchResult(searchResults);
-        });
+      this.specificSearch(newSearch).then((searchResults) => {
+        publishSearchResult(searchResults);
+      });
 
     Promise.all([computeSummary, computeResults])
-        .finally(() => {
-          this.updateInProgress = false;
-          this.run();
-        });
+      .finally(() => {
+        this.updateInProgress = false;
+        this.run();
+      });
   }
 
-  onDestroy() {}
+  onDestroy() { }
 
   private async update(
-      search: string, startNs: number, endNs: number,
-      resolution: number): Promise<SearchSummary> {
-    const quantumNs = Math.round(resolution * 10 * 1e9);
+    search: string, startPs: number, endPs: number,
+    resolution: number): Promise<SearchSummary> {
+    const quantumPs = Math.round(resolution * 10 * 1e12);
 
     const searchLiteral = escapeQuery(search);
 
-    startNs = Math.floor(startNs / quantumNs) * quantumNs;
+    startPs = Math.floor(startPs / quantumPs) * quantumPs;
 
-    const windowDur = Math.max(endNs - startNs, 1);
+    const windowDur = Math.max(endPs - startPs, 1);
     await this.query(`update search_summary_window set
-      window_start=${startNs},
+      window_start=${startPs},
       window_dur=${windowDur},
-      quantum=${quantumNs}
+      quantum=${quantumPs}
       where rowid = 0;`);
 
     const utidRes = await this.query(`select utid from thread join process
@@ -166,7 +166,7 @@ export class SearchController extends Controller<'main'> {
       or process.name glob ${searchLiteral}`);
 
     const utids = [];
-    for (const it = utidRes.iter({utid: NUM}); it.valid(); it.next()) {
+    for (const it = utidRes.iter({ utid: NUM }); it.valid(); it.next()) {
       utids.push(it.utid);
     }
 
@@ -175,8 +175,8 @@ export class SearchController extends Controller<'main'> {
 
     const res = await this.query(`
         select
-          (quantum_ts * ${quantumNs} + ${startNs})/1e9 as tsStart,
-          ((quantum_ts+1) * ${quantumNs} + ${startNs})/1e9 as tsEnd,
+          (quantum_ts * ${quantumPs} + ${startPs})/1e12 as tsStart,
+          ((quantum_ts+1) * ${quantumPs} + ${startPs})/1e12 as tsEnd,
           min(count(*), 255) as count
           from (
               select
@@ -199,7 +199,7 @@ export class SearchController extends Controller<'main'> {
       count: new Uint8Array(numRows),
     };
 
-    const it = res.iter({tsStart: NUM, tsEnd: NUM, count: NUM});
+    const it = res.iter({ tsStart: NUM, tsEnd: NUM, count: NUM });
     for (let row = 0; it.valid(); it.next(), ++row) {
       summary.tsStarts[row] = it.tsStart;
       summary.tsEnds[row] = it.tsEnd;
@@ -215,7 +215,7 @@ export class SearchController extends Controller<'main'> {
     const cpuToTrackId = new Map();
     for (const track of Object.values(this.app.state.tracks)) {
       if (track.kind === 'CpuSliceTrack') {
-        cpuToTrackId.set((track.config as {cpu: number}).cpu, track.id);
+        cpuToTrackId.set((track.config as { cpu: number }).cpu, track.id);
         continue;
       }
     }
@@ -225,7 +225,7 @@ export class SearchController extends Controller<'main'> {
       thread.name glob ${searchLiteral} or
       process.name glob ${searchLiteral}`);
     const utids = [];
-    for (const it = utidRes.iter({utid: NUM}); it.valid(); it.next()) {
+    for (const it = utidRes.iter({ utid: NUM }); it.valid(); it.next()) {
       utids.push(it.utid);
     }
 
@@ -283,7 +283,7 @@ export class SearchController extends Controller<'main'> {
     };
 
     const it = queryRes.iter(
-        {sliceId: NUM, ts: NUM, source: STR, sourceId: NUM, utid: NUM});
+      { sliceId: NUM, ts: NUM, source: STR, sourceId: NUM, utid: NUM });
     for (; it.valid(); it.next()) {
       let trackId = undefined;
       if (it.source === 'cpu') {
@@ -292,7 +292,7 @@ export class SearchController extends Controller<'main'> {
         trackId = this.app.state.uiTrackIdByTraceTrackId[it.sourceId];
       } else if (it.source === 'log') {
         const logTracks = Object.values(this.app.state.tracks)
-                              .filter((t) => t.kind === 'AndroidLogTrack');
+          .filter((t) => t.kind === 'AndroidLogTrack');
         if (logTracks.length > 0) {
           trackId = logTracks[0].id;
         }

@@ -14,37 +14,38 @@
 
 import * as m from 'mithril';
 
-import {channelChanged, getNextChannel, setChannel} from '../common/channels';
+import { channelChanged, getNextChannel, setChannel } from '../common/channels';
 
-import {globals} from './globals';
-import {createPage} from './pages';
+import { globals } from './globals';
+import { createPage } from './pages';
 
 
 export const HomePage = createPage({
   view() {
     return m(
-        '.page.home-page',
+      '.page.home-page',
+      m(
+        '.home-page-center',
+        m('.home-page-title', 'BR Perf Analyzer'),
+        m(`img.logo[src=${globals.root}assets/logo-3d.png]`),
         m(
-            '.home-page-center',
-            m('.home-page-title', 'Perfetto'),
-            m(`img.logo[src=${globals.root}assets/logo-3d.png]`),
-            m(
-                'div.channel-select',
-                m('div',
-                  'Feeling adventurous? Try our bleeding edge Canary version'),
-                m(
-                    'fieldset',
-                    mkChan('stable'),
-                    mkChan('canary'),
-                    m('.highlight'),
-                    ),
-                m(`.home-page-reload${channelChanged() ? '.show' : ''}`,
-                  'You need to reload the page for the changes to have effect'),
-                ),
-            ),
-        m('a.privacy',
-          {href: 'https://policies.google.com/privacy', target: '_blank'},
-          'Privacy policy'));
+          'div.channel-select',
+          m('div',
+            'Feeling adventurous? Try our bleeding edge Canary version'),
+          m(
+            'fieldset',
+            mkChan('stable'),
+            mkChan('canary'),
+            m('.highlight'),
+          ),
+          m(`.home-page-reload${channelChanged() ? '.show' : ''}`,
+            'You need to reload the page for the changes to have effect'),
+        ),
+      )//,
+      //m('a.privacy',
+      //  { href: 'https://policies.google.com/privacy', target: '_blank' },
+      //  'Privacy policy')
+    );
   },
 });
 
