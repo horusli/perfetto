@@ -66,11 +66,15 @@ import QueryServiceStateResponse =
     protos.perfetto.protos.QueryServiceStateResponse;
 // Trace Processor protos.
 import QueryArgs = protos.perfetto.protos.QueryArgs;
+import ResetTraceProcessorArgs = protos.perfetto.protos.ResetTraceProcessorArgs;
 import StatusResult = protos.perfetto.protos.StatusResult;
 import ComputeMetricArgs = protos.perfetto.protos.ComputeMetricArgs;
 import ComputeMetricResult = protos.perfetto.protos.ComputeMetricResult;
 import DisableAndReadMetatraceResult =
     protos.perfetto.protos.DisableAndReadMetatraceResult;
+import Trace = protos.perfetto.protos.Trace;
+import TracePacket = protos.perfetto.protos.TracePacket;
+import PerfettoMetatrace = protos.perfetto.protos.PerfettoMetatrace;
 
 export {
   AndroidLogConfig,
@@ -109,15 +113,19 @@ export {
   MeminfoCounters,
   NativeContinuousDumpConfig,
   ProcessStatsConfig,
+  PerfettoMetatrace,
   ReadBuffersRequest,
   ReadBuffersResponse,
   QueryServiceStateRequest,
   QueryServiceStateResponse,
   QueryArgs,
+  ResetTraceProcessorArgs,
   StatCounters,
   StatusResult,
   SysStatsConfig,
+  Trace,
   TraceConfig,
   TrackEventConfig,
+  TracePacket,
   VmstatCounters,
 };

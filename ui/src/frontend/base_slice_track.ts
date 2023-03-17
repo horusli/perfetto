@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { assertExists } from '../base/logging';
-import { Actions } from '../common/actions';
-import { cropText, drawIncompleteSlice } from '../common/canvas_utils';
-import { colorCompare, colorToStr, GRAY_COLOR } from '../common/colorizer';
-import { NUM, QueryResult } from '../common/query_result';
-import { SelectionKind } from '../common/state';
-import { fromPs, toPs } from '../common/time';
+import {assertExists} from '../base/logging';
+import {Actions} from '../common/actions';
+import {cropText, drawIncompleteSlice} from '../common/canvas_utils';
+import {colorCompare, colorToStr, GRAY_COLOR} from '../common/colorizer';
+import {NUM, QueryResult} from '../common/query_result';
+import {SelectionKind} from '../common/state';
+import {fromPs, toPs} from '../common/time';
 
-import { checkerboardExcept } from './checkerboard';
-import { globals } from './globals';
-import { Slice } from './slice';
-import { DEFAULT_SLICE_LAYOUT, SliceLayout } from './slice_layout';
-import { NewTrackArgs, SliceRect, Track } from './track';
+import {checkerboardExcept} from './checkerboard';
+import {globals} from './globals';
+import {Slice} from './slice';
+import {DEFAULT_SLICE_LAYOUT, SliceLayout} from './slice_layout';
+import {NewTrackArgs, SliceRect, Track} from './track';
 
 // The common class that underpins all tracks drawing slices.
 
@@ -43,7 +43,7 @@ const DEFAULT_SLICE_COLOR = GRAY_COLOR;
 // Exposed and standalone to allow for testing without making this
 // visible to subclasses.
 function filterVisibleSlices<S extends Slice>(
-  slices: S[], startS: number, endS: number): S[] {
+    slices: S[], startS: number, endS: number): S[] {
   // Here we aim to reduce the number of slices we have to draw
   // by ignoring those that are not visible. A slice is visible iff:
   //   slice.start + slice.duration >= start && slice.start <= end
@@ -86,7 +86,7 @@ function filterVisibleSlices<S extends Slice>(
   // One specific edge case that will come up often is when:
   // For all slice in slices: slice.startS > endS (e.g. all slices are to the
   // right). Since the slices are sorted by startS we can check this easily:
-  const maybeFirstSlice: S | undefined = slices[0];
+  const maybeFirstSlice: S|undefined = slices[0];
   if (maybeFirstSlice && maybeFirstSlice.startS > endS) {
     return [];
   }
@@ -153,7 +153,7 @@ interface SliceInternal {
 // methods use CastInternal<T['slice']> (i.e. whatever the subclass requests
 // plus our implementation fields) but when we call 'virtual' methods that
 // the subclass should implement we use just T['slice'] hiding x & w.
-type CastInternal<S extends Slice> = S & SliceInternal;
+type CastInternal<S extends Slice> = S&SliceInternal;
 
 // The meta-type which describes the types used to extend the BaseSliceTrack.
 // Derived classes can extend this interface to override these types if needed.
@@ -164,11 +164,11 @@ export interface BaseSliceTrackTypes {
 }
 
 export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
-  BaseSliceTrackTypes> extends
-  Track<T['config']> {
+                                                   BaseSliceTrackTypes> extends
+    Track<T['config']> {
   // This is the slice cache.
   private slices = new Array<CastInternal<T['slice']>>();
-  protected sliceLayout: SliceLayout = { ...DEFAULT_SLICE_LAYOUT };
+  protected sliceLayout: SliceLayout = {...DEFAULT_SLICE_LAYOUT};
 
   // These are the over-skirted cached bounds.
   private slicesStartPs = -1;
@@ -182,7 +182,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
   private extraSqlColumns: string[];
 
   private charWidth = -1;
-  private hoverPos?: { x: number, y: number };
+  private hoverPos?: {x: number, y: number};
   protected hoveredSlice?: T['slice'];
   private hoverTooltip: string[] = [];
   private maxDataDepth = 0;
@@ -213,16 +213,16 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
   getRowSpec(): T['row'] {
     return BASE_SLICE_ROW;
   }
-  onSliceOver(_args: OnSliceOverArgs<T['slice']>): void { }
-  onSliceOut(_args: OnSliceOutArgs<T['slice']>): void { }
-  onSliceClick(_args: OnSliceClickArgs<T['slice']>): void { }
+  onSliceOver(_args: OnSliceOverArgs<T['slice']>): void {}
+  onSliceOut(_args: OnSliceOutArgs<T['slice']>): void {}
+  onSliceClick(_args: OnSliceClickArgs<T['slice']>): void {}
   prepareSlices(slices: Array<T['slice']>): void {
     this.highlightHovererdAndSameTitle(slices);
   }
 
   // TODO(hjd): Remove.
   drawSchedLatencyArrow(
-    _: CanvasRenderingContext2D, _selectedSlice?: T['slice']): void { }
+      _: CanvasRenderingContext2D, _selectedSlice?: T['slice']): void {}
 
   constructor(args: NewTrackArgs) {
     super(args);
@@ -239,7 +239,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
 
   setSliceLayout(sliceLayout: SliceLayout) {
     if (sliceLayout.minDepth > sliceLayout.maxDepth) {
-      const { maxDepth, minDepth } = sliceLayout;
+      const {maxDepth, minDepth} = sliceLayout;
       throw new Error(`minDepth ${minDepth} must be <= maxDepth ${maxDepth}`);
     }
     this.sliceLayout = sliceLayout;
@@ -274,7 +274,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
   renderCanvas(ctx: CanvasRenderingContext2D): void {
     // TODO(hjd): fonts and colors should come from the CSS and not hardcoded
     // here.
-    const { timeScale } = globals.frontendLocalState;
+    const {timeScale} = globals.frontendLocalState;
     const vizTime = globals.frontendLocalState.visibleWindowTime;
 
     // If the visible time range is outside the cached area, requests
@@ -321,7 +321,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
     const rowSpacing = this.computedRowSpacing;
 
     // First pass: compute geometry of slices.
-    let selSlice: CastInternal<T['slice']> | undefined;
+    let selSlice: CastInternal<T['slice']>|undefined;
 
     // pxEnd is the last visible pixel in the visible viewport. Drawing
     // anything < 0 or > pxEnd doesn't produce any visible effect as it goes
@@ -355,7 +355,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
         slice.w = sliceVizLimit - slice.x;
       }
 
-      if (selection && (selection as { id: number }).id === slice.id) {
+      if (selection && (selection as {id: number}).id === slice.id) {
         selSlice = slice;
       }
     }
@@ -388,7 +388,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
     ctx.textBaseline = 'middle';
     for (const slice of vizSlices) {
       if ((slice.flags & SLICE_FLAGS_INSTANT) || !slice.title ||
-        slice.w < SLICE_MIN_WIDTH_FOR_TEXT_PX) {
+          slice.w < SLICE_MIN_WIDTH_FOR_TEXT_PX) {
         continue;
       }
 
@@ -405,7 +405,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
     ctx.font = '10px Roboto Condensed';
     for (const slice of vizSlices) {
       if (slice.w < SLICE_MIN_WIDTH_FOR_TEXT_PX || !slice.subTitle ||
-        (slice.flags & SLICE_FLAGS_INSTANT)) {
+          (slice.flags & SLICE_FLAGS_INSTANT)) {
         continue;
       }
       const rectXCenter = slice.x + slice.w / 2;
@@ -424,7 +424,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
       const THICKNESS = 3;
       ctx.lineWidth = THICKNESS;
       ctx.strokeRect(
-        selSlice.x, y - THICKNESS / 2, selSlice.w, sliceHeight + THICKNESS);
+          selSlice.x, y - THICKNESS / 2, selSlice.w, sliceHeight + THICKNESS);
       ctx.closePath();
     }
 
@@ -437,7 +437,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
     // If a slice is hovered, draw the tooltip.
     const tooltip = this.hoverTooltip;
     if (this.hoveredSlice !== undefined && tooltip.length > 0 &&
-      this.hoverPos !== undefined) {
+        this.hoverPos !== undefined) {
       if (tooltip.length === 1) {
         this.drawTrackHoverTooltip(ctx, this.hoverPos, tooltip[0]);
       } else {
@@ -476,7 +476,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
       this.maxDurPs = row.maxDur;
       this.sqlState = 'QUERY_DONE';
     } else if (
-      this.sqlState === 'INITIALIZING' || this.sqlState === 'QUERY_PENDING') {
+        this.sqlState === 'INITIALIZING' || this.sqlState === 'QUERY_PENDING') {
       return;
     }
 
@@ -621,7 +621,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
     };
   }
 
-  private findSlice({ x, y }: { x: number, y: number }): undefined | Slice {
+  private findSlice({x, y}: {x: number, y: number}): undefined|Slice {
     const trackHeight = this.computedTrackHeight;
     const sliceHeight = this.computedSliceHeight;
     const padding = this.sliceLayout.padding;
@@ -644,7 +644,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
     return undefined;
   }
 
-  onMouseMove(position: { x: number, y: number }): void {
+  onMouseMove(position: {x: number, y: number}): void {
     this.hoverPos = position;
     this.updateHoveredSlice(this.findSlice(position));
   }
@@ -661,40 +661,40 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
     if (slice === lastHoveredSlice) return;
 
     if (this.hoveredSlice === undefined) {
-      globals.dispatch(Actions.setHighlightedSliceId({ sliceId: -1 }));
-      this.onSliceOut({ slice: assertExists(lastHoveredSlice) });
+      globals.dispatch(Actions.setHighlightedSliceId({sliceId: -1}));
+      this.onSliceOut({slice: assertExists(lastHoveredSlice)});
       this.hoverTooltip = [];
       this.hoverPos = undefined;
     } else {
-      const args: OnSliceOverArgs<T['slice']> = { slice: this.hoveredSlice };
+      const args: OnSliceOverArgs<T['slice']> = {slice: this.hoveredSlice};
       globals.dispatch(
-        Actions.setHighlightedSliceId({ sliceId: this.hoveredSlice.id }));
+          Actions.setHighlightedSliceId({sliceId: this.hoveredSlice.id}));
       this.onSliceOver(args);
       this.hoverTooltip = args.tooltip || [];
     }
   }
 
-  onMouseClick(position: { x: number, y: number }): boolean {
+  onMouseClick(position: {x: number, y: number}): boolean {
     const slice = this.findSlice(position);
     if (slice === undefined) {
       return false;
     }
-    const args: OnSliceClickArgs<T['slice']> = { slice };
+    const args: OnSliceClickArgs<T['slice']> = {slice};
     this.onSliceClick(args);
     return true;
   }
 
   private getVisibleSlicesInternal(startS: number, endS: number):
-    Array<CastInternal<T['slice']>> {
+      Array<CastInternal<T['slice']>> {
     return filterVisibleSlices<CastInternal<T['slice']>>(
-      this.slices, startS, endS);
+        this.slices, startS, endS);
   }
 
   private updateSliceAndTrackHeight() {
     const lay = this.sliceLayout;
 
     const rows =
-      Math.min(Math.max(this.maxDataDepth + 1, lay.minDepth), lay.maxDepth);
+        Math.min(Math.max(this.maxDataDepth + 1, lay.minDepth), lay.maxDepth);
 
     // Compute the track height.
     let trackHeight;
@@ -721,7 +721,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
   }
 
   private drawChevron(
-    ctx: CanvasRenderingContext2D, x: number, y: number, h: number) {
+      ctx: CanvasRenderingContext2D, x: number, y: number, h: number) {
     // Draw an upward facing chevrons, in order: A, B, C, D, and back to A.
     // . (x, y)
     //      A
@@ -749,7 +749,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
   protected highlightHovererdAndSameTitle(slices: Slice[]) {
     for (const slice of slices) {
       const isHovering = globals.state.highlightedSliceId === slice.id ||
-        (this.hoveredSlice && this.hoveredSlice.title === slice.title);
+          (this.hoveredSlice && this.hoveredSlice.title === slice.title);
       if (isHovering) {
         slice.color = {
           c: slice.baseColor.c,
@@ -769,7 +769,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
   }
 
   getSliceRect(_tStart: number, _tEnd: number, _depth: number): SliceRect
-    | undefined {
+      |undefined {
     // TODO(hjd): Implement this as part of updating flow events.
     return undefined;
   }

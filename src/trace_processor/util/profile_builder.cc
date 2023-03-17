@@ -45,6 +45,8 @@ base::StringView ToString(CallsiteAnnotation annotation) {
       return "jit";
     case CallsiteAnnotation::kCommonFrame:
       return "common-frame";
+    case CallsiteAnnotation::kCommonFrameInterp:
+      return "common-frame-interp";
   }
   PERFETTO_FATAL("For GCC");
 }
@@ -207,7 +209,7 @@ void GProfileBuilder::WriteSampleTypes(
     int64_t type =
         string_table_.InternString(base::StringView(value_type.type));
     int64_t unit =
-        string_table_.InternString(base::StringView(value_type.type));
+        string_table_.InternString(base::StringView(value_type.unit));
     // Add message later, remember protozero does not allow you to interleave
     // these write calls.
     auto* sample_type = result_->add_sample_type();

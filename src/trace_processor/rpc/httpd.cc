@@ -52,9 +52,12 @@ const char* kAllowedCORSOrigins[] = {
     "http://171.28.150.7:10000",
     "http://172.28.150.7:8080/perfetto",
     "http://172.28.150.7:8080/brperfanalyzer",    
-    "http://192.168.2.124:10000",
-    "http://192.168.2.124:8080/perfetto",
-    "http://192.168.2.124:8080/brperfanalyzer",
+    "http://192.168.2.121:10000",
+    "http://192.168.2.121:8080/perfetto",
+    "http://192.168.2.121:8080/brperfanalyzer",
+    "http://192.168.2.122:10000",
+    "http://192.168.2.122:8080/perfetto",
+    "http://192.168.2.122:8080/brperfanalyzer",
     "http://10.10.254.101:10000",
     "http://10.10.254.101:8080/perfetto",
     "http://10.10.254.101:8080/brperfanalyzer",
@@ -223,15 +226,12 @@ void Httpd::OnHttpRequest(const base::HttpRequest& req) {
     // rpc.Query() call. No further calls will be made once Query() returns.
     auto on_result_chunk = [&](const uint8_t* buf, size_t len, bool has_more) {
       PERFETTO_DLOG("Sending response chunk, len=%zu eof=%d", len, !has_more);
-      char chunk_hdr[32];
-      auto hdr_len = static_cast<size_t>(sprintf(chunk_hdr, "%zx\r\n", len));
-      conn.SendResponseBody(chunk_hdr, hdr_len);
+      base::StackString<32> chunk_hdr("%zx\r\n", len);
+      conn.SendResponseBody(chunk_hdr.c_str(), chunk_hdr.len());
       conn.SendResponseBody(buf, len);
       conn.SendResponseBody("\r\n", 2);
-      if (!has_more) {
-        hdr_len = static_cast<size_t>(sprintf(chunk_hdr, "0\r\n\r\n"));
-        conn.SendResponseBody(chunk_hdr, hdr_len);
-      }
+      if (!has_more)
+        conn.SendResponseBody("0\r\n\r\n", 5);
     };
     trace_processor_rpc_.Query(
         reinterpret_cast<const uint8_t*>(req.body.data()), req.body.size(),
@@ -246,7 +246,8 @@ void Httpd::OnHttpRequest(const base::HttpRequest& req) {
   }
 
   if (req.uri == "/enable_metatrace") {
-    trace_processor_rpc_.EnableMetatrace();
+    trace_processor_rpc_.EnableMetatrace(
+        reinterpret_cast<const uint8_t*>(req.body.data()), req.body.size());
     return conn.SendResponse("200 OK", headers);
   }
 

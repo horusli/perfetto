@@ -19,7 +19,7 @@ import { toPs } from '../../common/time';
 import { Config, COUNTER_TRACK_KIND } from '../../tracks/counter';
 import { globals } from '../globals';
 
-import { AggregationController } from './aggregation_controller';
+import {AggregationController} from './aggregation_controller';
 
 export class CounterAggregationController extends AggregationController {
   async createAggregateView(engine: Engine, area: Area) {
@@ -131,13 +131,13 @@ export class CounterAggregationController extends AggregationController {
     ];
   }
 
-  async getExtra() { }
+  async getExtra() {}
 
   getTabName() {
     return 'Counters';
   }
 
   getDefaultSorting(): Sorting {
-    return { column: 'name', direction: 'DESC' };
+    return {column: 'name', direction: 'DESC'};
   }
 }

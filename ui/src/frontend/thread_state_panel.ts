@@ -17,59 +17,59 @@ import * as m from 'mithril';
 import { Actions } from '../common/actions';
 import { timeToCode, toPs } from '../common/time';
 
-import { globals } from './globals';
-import { Panel, PanelSize } from './panel';
-import { scrollToTrackAndTs } from './scroll_helper';
+import {globals} from './globals';
+import {Panel, PanelSize} from './panel';
+import {scrollToTrackAndTs} from './scroll_helper';
 
 
 export class ThreadStatePanel extends Panel {
   view() {
     const threadState = globals.threadStateDetails;
     if (threadState === undefined || threadState.utid === undefined ||
-      threadState.ts === undefined || threadState.dur === undefined ||
-      threadState.state === undefined) {
+        threadState.ts === undefined || threadState.dur === undefined ||
+        threadState.state === undefined) {
       return m('.details-panel');
     }
     const threadInfo = globals.threads.get(threadState.utid);
     if (threadInfo) {
       return m(
-        '.details-panel',
-        m('.details-panel-heading', m('h2', 'Thread State')),
-        m('.details-table', [m('table', [
-          m('tr',
-            m('th', `Start time`),
-            m('td', `${timeToCode(threadState.ts)}`)),
-          m('tr',
-            m('th', `Duration`),
-            m(
-              'td',
-              `${timeToCode(threadState.dur)} `,
-            )),
-          m('tr',
-            m('th', `State`),
-            m('td',
-              this.getStateContent(
-                threadState.state,
-                threadState.cpu,
-                threadState.sliceId,
-                threadState.ts))),
-          m('tr',
-            m('th', `Process`),
-            //m('td', `${threadInfo.procName} [${threadInfo.pid}]`)),
-            m('td', `${threadInfo.procName}`)),
-          this.getBlockedFunctionContent(threadState.blockedFunction),
-        ])]));
+          '.details-panel',
+          m('.details-panel-heading', m('h2', 'Thread State')),
+          m('.details-table', [m('table', [
+              m('tr',
+                m('th', `Start time`),
+                m('td', `${timeToCode(threadState.ts)}`)),
+              m('tr',
+                m('th', `Duration`),
+                m(
+                    'td',
+                    `${timeToCode(threadState.dur)} `,
+                    )),
+              m('tr',
+                m('th', `State`),
+                m('td',
+                  this.getStateContent(
+                      threadState.state,
+                      threadState.cpu,
+                      threadState.sliceId,
+                      threadState.ts))),
+              m('tr',
+                m('th', `Process`),
+               //m('td', `${threadInfo.procName} [${threadInfo.pid}]`)),
+               m('td', `${threadInfo.procName}`)),
+              this.getBlockedFunctionContent(threadState.blockedFunction),
+            ])]));
     }
     return m('.details-panel');
   }
 
-  renderCanvas(_ctx: CanvasRenderingContext2D, _size: PanelSize) { }
+  renderCanvas(_ctx: CanvasRenderingContext2D, _size: PanelSize) {}
 
   // If it is the running state, we want to show which CPU and a button to
   // go to the sched slice. Otherwise, just show the state.
   getStateContent(
-    state: string, cpu: number | undefined, sliceId: number | undefined,
-    ts: number) {
+      state: string, cpu: number|undefined, sliceId: number|undefined,
+      ts: number) {
     if (sliceId === undefined || cpu === undefined) {
       return [state];
     }
@@ -101,7 +101,7 @@ export class ThreadStatePanel extends Panel {
     ];
   }
 
-  getBlockedFunctionContent(blockedFunction: string | undefined) {
+  getBlockedFunctionContent(blockedFunction: string|undefined) {
     if (blockedFunction === undefined) {
       return null;
     }

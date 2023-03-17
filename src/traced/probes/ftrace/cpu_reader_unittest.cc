@@ -18,6 +18,7 @@
 
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 
 #include "perfetto/base/build_config.h"
 #include "perfetto/ext/base/utils.h"
@@ -39,6 +40,7 @@
 #include "protos/perfetto/trace/ftrace/ftrace_event_bundle.gen.h"
 #include "protos/perfetto/trace/ftrace/ftrace_event_bundle.pbzero.h"
 #include "protos/perfetto/trace/ftrace/power.gen.h"
+#include "protos/perfetto/trace/ftrace/raw_syscalls.gen.h"
 #include "protos/perfetto/trace/ftrace/sched.gen.h"
 #include "protos/perfetto/trace/ftrace/task.gen.h"
 #include "protos/perfetto/trace/trace_packet.gen.h"
@@ -60,16 +62,18 @@ using testing::Return;
 using testing::StartsWith;
 
 namespace perfetto {
-
 namespace {
 
 FtraceDataSourceConfig EmptyConfig() {
   return FtraceDataSourceConfig{EventFilter{},
                                 EventFilter{},
                                 DisabledCompactSchedConfigForTesting(),
+                                base::nullopt,
                                 {},
                                 {},
-                                false /*symbolize_ksyms*/};
+                                false /*symbolize_ksyms*/,
+                                false /*preserve_ftrace_buffer*/,
+                                {}};
 }
 
 constexpr uint64_t kNanoInSecond = 1000 * 1000 * 1000;
@@ -185,8 +189,6 @@ class BinaryWriter {
   std::unique_ptr<uint8_t[]> page_;
   uint8_t* ptr_;
 };
-
-}  // namespace
 
 TEST(PageFromXxdTest, OneLine) {
   std::string text = R"(
@@ -756,6 +758,87 @@ TEST(CpuReaderTest, ParseThreePrint) {
   }
 }
 
+TEST(CpuReaderTest, ParsePrintWithAndWithoutFilter) {
+  const ExamplePage* test_case = &g_three_prints;
+
+  ProtoTranslationTable* table = GetTable(test_case->name);
+  auto page = PageFromXxd(test_case->data);
+
+  FtraceMetadata metadata{};
+  std::unique_ptr<CompactSchedBuffer> compact_buffer(new CompactSchedBuffer());
+  const uint8_t* parse_pos = page.get();
+  base::Optional<CpuReader::PageHeader> page_header =
+      CpuReader::ParsePageHeader(&parse_pos, table->page_header_size_len());
+
+  const uint8_t* page_end = page.get() + base::kPageSize;
+  ASSERT_TRUE(page_header.has_value());
+  ASSERT_FALSE(page_header->lost_events);
+  ASSERT_LE(parse_pos + page_header->size, page_end);
+
+  {
+    FtraceDataSourceConfig ds_config_no_filter = EmptyConfig();
+    ds_config_no_filter.event_filter.AddEnabledEvent(
+        table->EventToFtraceId(GroupAndName("ftrace", "print")));
+
+    BundleProvider bundle_provider(base::kPageSize);
+    size_t evt_bytes = CpuReader::ParsePagePayload(
+        parse_pos, &page_header.value(), table, &ds_config_no_filter,
+        compact_buffer.get(), bundle_provider.writer(), &metadata);
+    ASSERT_GE(evt_bytes, 0u);
+
+    auto bundle = bundle_provider.ParseProto();
+    using ::testing::Pointee;
+    using ::testing::Property;
+    EXPECT_THAT(
+        bundle,
+        Pointee(Property(
+            &protos::gen::FtraceEventBundle::event,
+            ElementsAre(Property(&protos::gen::FtraceEvent::print,
+                                 Property(&protos::gen::PrintFtraceEvent::buf,
+                                          "Hello, world!\n")),
+                        Property(&protos::gen::FtraceEvent::print,
+                                 Property(&protos::gen::PrintFtraceEvent::buf,
+                                          "Good afternoon, world!\n")),
+                        Property(&protos::gen::FtraceEvent::print,
+                                 Property(&protos::gen::PrintFtraceEvent::buf,
+                                          "Goodbye, world!\n"))))));
+  }
+
+  {
+    FtraceDataSourceConfig ds_config_with_filter = EmptyConfig();
+    ds_config_with_filter.event_filter.AddEnabledEvent(
+        table->EventToFtraceId(GroupAndName("ftrace", "print")));
+
+    FtraceConfig::PrintFilter conf;
+    auto* rule = conf.add_rules();
+    rule->set_prefix("Good ");
+    rule->set_allow(false);
+    ds_config_with_filter.print_filter =
+        FtracePrintFilterConfig::Create(conf, table);
+    ASSERT_TRUE(ds_config_with_filter.print_filter.has_value());
+
+    BundleProvider bundle_provider(base::kPageSize);
+    size_t evt_bytes = CpuReader::ParsePagePayload(
+        parse_pos, &page_header.value(), table, &ds_config_with_filter,
+        compact_buffer.get(), bundle_provider.writer(), &metadata);
+    ASSERT_GE(evt_bytes, 0u);
+
+    auto bundle = bundle_provider.ParseProto();
+    using ::testing::Pointee;
+    using ::testing::Property;
+    EXPECT_THAT(
+        bundle,
+        Pointee(Property(
+            &protos::gen::FtraceEventBundle::event,
+            ElementsAre(Property(&protos::gen::FtraceEvent::print,
+                                 Property(&protos::gen::PrintFtraceEvent::buf,
+                                          "Hello, world!\n")),
+                        Property(&protos::gen::FtraceEvent::print,
+                                 Property(&protos::gen::PrintFtraceEvent::buf,
+                                          "Goodbye, world!\n"))))));
+  }
+}
+
 // clang-format off
 // # tracer: nop
 // #
@@ -865,9 +948,12 @@ TEST(CpuReaderTest, ParseSixSchedSwitchCompactFormat) {
   FtraceDataSourceConfig ds_config{EventFilter{},
                                    EventFilter{},
                                    EnabledCompactSchedConfigForTesting(),
+                                   base::nullopt,
                                    {},
                                    {},
-                                   false /* symbolize_ksyms*/};
+                                   false /* symbolize_ksyms*/,
+                                   false /*preserve_ftrace_buffer*/,
+                                   {}};
   ds_config.event_filter.AddEnabledEvent(
       table->EventToFtraceId(GroupAndName("sched", "sched_switch")));
 
@@ -1088,6 +1174,7 @@ TEST_F(CpuReaderTableTest, ParseAllFields) {
       &ftrace_, events, std::move(common_fields),
       ProtoTranslationTable::DefaultPageHeaderSpecForTesting(),
       InvalidCompactSchedEventFormatForTesting(), printk_formats);
+  FtraceDataSourceConfig ds_config = EmptyConfig();
 
   FakeEventProvider provider(base::kPageSize);
 
@@ -1124,7 +1211,7 @@ TEST_F(CpuReaderTableTest, ParseAllFields) {
   FtraceMetadata metadata{};
 
   ASSERT_TRUE(CpuReader::ParseEvent(ftrace_event_id, input.get(),
-                                    input.get() + length, &table,
+                                    input.get() + length, &table, &ds_config,
                                     provider.writer(), &metadata));
 
   auto event = provider.ParseProto();
@@ -1154,11 +1241,93 @@ TEST_F(CpuReaderTableTest, ParseAllFields) {
               Contains(Pair(99u, k64BitUserspaceBlockDeviceId)));
 }
 
+TEST(CpuReaderTest, SysEnterEvent) {
+  BinaryWriter writer;
+  ProtoTranslationTable* table = GetTable("synthetic");
+  FtraceDataSourceConfig ds_config = EmptyConfig();
+
+  const auto kSysEnterId = static_cast<uint16_t>(
+      table->EventToFtraceId(GroupAndName("raw_syscalls", "sys_enter")));
+  ASSERT_GT(kSysEnterId, 0ul);
+  constexpr uint32_t kPid = 23;
+  constexpr uint32_t kFd = 7;
+  constexpr auto kSyscall = SYS_close;
+
+  writer.Write<int32_t>(1001);      // Common field.
+  writer.Write<int32_t>(kPid);      // Common pid
+  writer.Write<int64_t>(kSyscall);  // id
+  for (uint32_t i = 0; i < 6; ++i) {
+    writer.Write<uint64_t>(kFd + i);  // args
+  }
+
+  auto input = writer.GetCopy();
+  auto length = writer.written();
+
+  BundleProvider bundle_provider(base::kPageSize);
+  FtraceMetadata metadata{};
+
+  ASSERT_TRUE(CpuReader::ParseEvent(
+      kSysEnterId, input.get(), input.get() + length, table, &ds_config,
+      bundle_provider.writer()->add_event(), &metadata));
+
+  std::unique_ptr<protos::gen::FtraceEventBundle> a =
+      bundle_provider.ParseProto();
+  ASSERT_NE(a, nullptr);
+  ASSERT_EQ(a->event().size(), 1u);
+  const auto& event = a->event()[0].sys_enter();
+  EXPECT_EQ(event.id(), kSyscall);
+  for (uint32_t i = 0; i < 6; ++i) {
+    EXPECT_EQ(event.args()[i], kFd + i);
+  }
+}
+
+TEST(CpuReaderTest, SysExitEvent) {
+  BinaryWriter writer;
+  ProtoTranslationTable* table = GetTable("synthetic");
+  FtraceDataSourceConfig ds_config = EmptyConfig();
+  const auto syscalls = SyscallTable::FromCurrentArch();
+
+  const auto kSysExitId = static_cast<uint16_t>(
+      table->EventToFtraceId(GroupAndName("raw_syscalls", "sys_exit")));
+  ASSERT_GT(kSysExitId, 0ul);
+  constexpr pid_t kPid = 23;
+  constexpr int64_t kFd = 2;
+
+  ds_config.syscalls_returning_fd =
+      FtraceConfigMuxer::GetSyscallsReturningFds(syscalls);
+  ASSERT_FALSE(ds_config.syscalls_returning_fd.empty());
+  const auto syscall_id = *ds_config.syscalls_returning_fd.begin();
+
+  writer.Write<int32_t>(1001);        // Common field.
+  writer.Write<int32_t>(kPid);        // Common pid
+  writer.Write<int64_t>(syscall_id);  // id
+  writer.Write<int64_t>(kFd);         // ret
+
+  auto input = writer.GetCopy();
+  auto length = writer.written();
+  BundleProvider bundle_provider(base::kPageSize);
+  FtraceMetadata metadata{};
+
+  ASSERT_TRUE(CpuReader::ParseEvent(
+      kSysExitId, input.get(), input.get() + length, table, &ds_config,
+      bundle_provider.writer()->add_event(), &metadata));
+
+  std::unique_ptr<protos::gen::FtraceEventBundle> a =
+      bundle_provider.ParseProto();
+  ASSERT_NE(a, nullptr);
+  ASSERT_EQ(a->event().size(), 1u);
+  const auto& event = a->event()[0].sys_exit();
+  EXPECT_EQ(event.id(), syscall_id);
+  EXPECT_EQ(event.ret(), kFd);
+  EXPECT_THAT(metadata.fds, Contains(std::make_pair(kPid, kFd)));
+}
+
 TEST(CpuReaderTest, TaskRenameEvent) {
   BundleProvider bundle_provider(base::kPageSize);
 
   BinaryWriter writer;
   ProtoTranslationTable* table = GetTable("android_seed_N2F62_3.10.49");
+  FtraceDataSourceConfig ds_config = EmptyConfig();
 
   constexpr uint32_t kTaskRenameId = 19;
 
@@ -1175,7 +1344,7 @@ TEST(CpuReaderTest, TaskRenameEvent) {
   FtraceMetadata metadata{};
 
   ASSERT_TRUE(CpuReader::ParseEvent(kTaskRenameId, input.get(),
-                                    input.get() + length, table,
+                                    input.get() + length, table, &ds_config,
                                     bundle_provider.writer(), &metadata));
   EXPECT_THAT(metadata.rename_pids, Contains(9999));
   EXPECT_THAT(metadata.pids, Contains(9999));
@@ -1190,6 +1359,7 @@ TEST(CpuReaderTest, EventNonZeroTerminated) {
 
   BinaryWriter writer;
   ProtoTranslationTable* table = GetTable("android_seed_N2F62_3.10.49");
+  FtraceDataSourceConfig ds_config = EmptyConfig();
 
   constexpr uint32_t kTaskRenameId = 19;
 
@@ -1208,7 +1378,7 @@ TEST(CpuReaderTest, EventNonZeroTerminated) {
   FtraceMetadata metadata{};
 
   ASSERT_TRUE(CpuReader::ParseEvent(
-      kTaskRenameId, input.get(), input.get() + length, table,
+      kTaskRenameId, input.get(), input.get() + length, table, &ds_config,
       bundle_provider.writer()->add_event(), &metadata));
   std::unique_ptr<protos::gen::FtraceEventBundle> a =
       bundle_provider.ParseProto();
@@ -2892,7 +3062,7 @@ static ExamplePage g_zero_padded{
     00000CA0: 502D 7072 6564 6963 7469 6F6E 7C32 3137   P-prediction|217
     00000CB0: 3332 3932 3839 3739 3138 0A00 70FE 0600   3292897918..p...
     00000CC0: 0500 0000 EF02 0000 50AA 4C00 AEFF FFFF   ........P.L.....
-    00000CD0: 427C 3633 397C 6170 7020 616C 6172 6D20   B|639|app alarm 
+    00000CD0: 427C 3633 397C 6170 7020 616C 6172 6D20   B|639|app alarm
     00000CE0: 696E 2037 3837 3875 733B 2056 5359 4E43   in 7878us; VSYNC
     00000CF0: 2069 6E20 3338 3837 3875 730A 0000 0000    in 38878us.....
     00000D00: C7AD 0100 0500 0000 EF02 0000 50AA 4C00   ............P.L.
@@ -2982,4 +3152,5 @@ TEST(CpuReaderTest, ZeroPaddedPageWorkaround) {
   ASSERT_TRUE(bundle);
 }
 
+}  // namespace
 }  // namespace perfetto

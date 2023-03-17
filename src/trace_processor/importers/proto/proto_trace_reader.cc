@@ -31,11 +31,12 @@
 #include "src/trace_processor/importers/common/track_tracker.h"
 #include "src/trace_processor/importers/ftrace/ftrace_module.h"
 #include "src/trace_processor/importers/proto/metadata_tracker.h"
+#include "src/trace_processor/importers/proto/packet_analyzer.h"
 #include "src/trace_processor/importers/proto/packet_sequence_state.h"
 #include "src/trace_processor/importers/proto/proto_incremental_state.h"
+#include "src/trace_processor/sorter/trace_sorter.h"
 #include "src/trace_processor/storage/stats.h"
 #include "src/trace_processor/storage/trace_storage.h"
-#include "src/trace_processor/trace_sorter.h"
 #include "src/trace_processor/util/descriptors.h"
 #include "src/trace_processor/util/gzip_utils.h"
 
@@ -52,7 +53,10 @@ namespace perfetto {
 namespace trace_processor {
 
 ProtoTraceReader::ProtoTraceReader(TraceProcessorContext* ctx)
-    : context_(ctx) {}
+    : context_(ctx),
+      skipped_packet_key_id_(ctx->storage->InternString("skipped_packet")),
+      invalid_incremental_state_key_id_(
+          ctx->storage->InternString("invalid_incremental_state")) {}
 ProtoTraceReader::~ProtoTraceReader() = default;
 
 util::Status ProtoTraceReader::Parse(TraceBlobView blob) {
@@ -136,6 +140,14 @@ util::Status ProtoTraceReader::ParsePacket(TraceBlobView packet) {
     }
 
     if (!state->IsIncrementalStateValid()) {
+      if (context_->content_analyzer) {
+        // Account for the skipped packet for trace proto content analysis,
+        // with a special annotation.
+        PacketAnalyzer::SampleAnnotation annotation;
+        annotation.push_back(
+            {skipped_packet_key_id_, invalid_incremental_state_key_id_});
+        PacketAnalyzer::Get(context_)->ProcessPacket(packet, annotation);
+      }
       context_->storage->IncrementStats(stats::tokenizer_skipped_packets);
       return util::OkStatus();
     }
@@ -199,6 +211,10 @@ util::Status ProtoTraceReader::ParsePacket(TraceBlobView packet) {
   }
   latest_timestamp_ = std::max(timestamp, latest_timestamp_);
 
+  if (context_->content_analyzer && !decoder.has_track_event()) {
+    PacketAnalyzer::Get(context_)->ProcessPacket(packet, {});
+  }
+
   auto& modules = context_->modules_by_field;
   for (uint32_t field_id = 1; field_id < modules.size(); ++field_id) {
     if (!modules[field_id].empty() && decoder.Get(field_id).valid()) {
@@ -224,7 +240,8 @@ util::Status ProtoTraceReader::ParsePacket(TraceBlobView packet) {
 
   // Use parent data and length because we want to parse this again
   // later to get the exact type of the packet.
-  context_->sorter->PushTracePacket(timestamp, state, std::move(packet));
+  context_->sorter->PushTracePacket(timestamp, state->current_generation(),
+                                    std::move(packet));
 
   return util::OkStatus();
 }

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { assertFalse, assertTrue } from '../base/logging';
-import { TimeSpan } from '../common/time';
+import {assertFalse, assertTrue} from '../base/logging';
+import {TimeSpan} from '../common/time';
 
 const MAX_ZOOM_SPAN_SEC = 1e-11;  // 10 ps.
 
@@ -79,11 +79,19 @@ export class TimeScale {
   get endPx(): number {
     return this._endPx;
   }
+
+  get widthPx(): number {
+    return this._endPx - this._startPx;
+  }
+
+  get timeSpan(): TimeSpan {
+    return this.timeBounds;
+  }
 }
 
 export function computeZoom(
-  scale: TimeScale, span: TimeSpan, zoomFactor: number, zoomPx: number):
-  TimeSpan {
+    scale: TimeScale, span: TimeSpan, zoomFactor: number, zoomPx: number):
+    TimeSpan {
   const startPx = scale.startPx;
   const endPx = scale.endPx;
   const deltaPx = endPx - startPx;

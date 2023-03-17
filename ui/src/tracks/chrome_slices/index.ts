@@ -12,21 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Actions } from '../../common/actions';
-import { cropText, drawIncompleteSlice } from '../../common/canvas_utils';
-import { colorForThreadIdleSlice, hslForSlice } from '../../common/colorizer';
-import { TRACE_MARGIN_TIME_S } from '../../common/constants';
-import { PluginContext } from '../../common/plugin_api';
-import { NUM, NUM_NULL, STR } from '../../common/query_result';
-import { fromPs, toPs } from '../../common/time';
-import { TrackData } from '../../common/track_data';
+import {Actions} from '../../common/actions';
+import {cropText, drawIncompleteSlice} from '../../common/canvas_utils';
+import {colorForThreadIdleSlice, hslForSlice} from '../../common/colorizer';
+import {PluginContext} from '../../common/plugin_api';
+import {NUM, NUM_NULL, STR} from '../../common/query_result';
+import {fromPs, toPs} from '../../common/time';
+import {TrackData} from '../../common/track_data';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import { checkerboardExcept } from '../../frontend/checkerboard';
-import { globals } from '../../frontend/globals';
-import { cachedHsluvToHex } from '../../frontend/hsluv_cache';
-import { NewTrackArgs, SliceRect, Track } from '../../frontend/track';
+import {checkerboardExcept} from '../../frontend/checkerboard';
+import {globals} from '../../frontend/globals';
+import {cachedHsluvToHex} from '../../frontend/hsluv_cache';
+import {NewTrackArgs, SliceRect, Track} from '../../frontend/track';
 
 export const SLICE_TRACK_KIND = 'ChromeSliceTrack';
 const SLICE_HEIGHT = 18;
@@ -182,7 +181,7 @@ export class ChromeSliceTrackController extends TrackController<Config, Data> {
         // it is less than or equal to one, incase the thread duration exceeds
         // the total duration.
         cpuTimeRatio =
-          Math.min(Math.round((it.threadDur / it.dur) * 100) / 100, 1);
+            Math.min(Math.round((it.threadDur / it.dur) * 100) / 100, 1);
       }
       slices.cpuTimeRatio![row] = cpuTimeRatio;
     }
@@ -210,7 +209,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
   renderCanvas(ctx: CanvasRenderingContext2D): void {
     // TODO: fonts and colors should come from the CSS and not hardcoded here.
 
-    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
+    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
     const data = this.data();
 
     if (data === undefined) return;  // Can't possibly draw anything.
@@ -218,12 +217,12 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     // If the cached trace slices don't fully cover the visible time range,
     // show a gray rectangle with a "Loading..." label.
     checkerboardExcept(
-      ctx,
-      this.getHeight(),
-      timeScale.timeToPx(visibleWindowTime.start),
-      timeScale.timeToPx(visibleWindowTime.end),
-      timeScale.timeToPx(data.start),
-      timeScale.timeToPx(data.end),
+        ctx,
+        this.getHeight(),
+        timeScale.timeToPx(visibleWindowTime.start),
+        timeScale.timeToPx(visibleWindowTime.end),
+        timeScale.timeToPx(data.start),
+        timeScale.timeToPx(data.end),
     );
 
     ctx.textAlign = 'center';
@@ -233,7 +232,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
 
     // The draw of the rect on the selected slice must happen after the other
     // drawings, otherwise it would result under another rect.
-    let drawRectOnSelected = () => { };
+    let drawRectOnSelected = () => {};
 
     for (let i = 0; i < data.starts.length; i++) {
       const tStart = data.starts[i];
@@ -256,12 +255,12 @@ export class ChromeSliceTrack extends Track<Config, Data> {
 
       const currentSelection = globals.state.currentSelection;
       const isSelected = currentSelection &&
-        currentSelection.kind === 'CHROME_SLICE' &&
-        currentSelection.id !== undefined && currentSelection.id === sliceId;
+          currentSelection.kind === 'CHROME_SLICE' &&
+          currentSelection.id !== undefined && currentSelection.id === sliceId;
 
       const name = title.replace(/( )?\d+/g, '');
       const highlighted = titleId === this.hoveredTitleId ||
-        globals.state.highlightedSliceId === sliceId;
+          globals.state.highlightedSliceId === sliceId;
 
       const hasFocus = highlighted || isSelected;
 
@@ -315,7 +314,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
       if (isIncomplete && rect.width > SLICE_HEIGHT / 4) {
         drawIncompleteSlice(ctx, rect.left, rect.top, rect.width, SLICE_HEIGHT);
       } else if (
-        data.cpuTimeRatio !== undefined && data.cpuTimeRatio[i] < 1 - 1e-9) {
+          data.cpuTimeRatio !== undefined && data.cpuTimeRatio[i] < 1 - 1e-9) {
         // We draw two rectangles, representing the ratio between wall time and
         // time spent on cpu.
         const cpuTimeRatio = data.cpuTimeRatio![i];
@@ -323,12 +322,12 @@ export class ChromeSliceTrack extends Track<Config, Data> {
         const secondPartWidth = rect.width * (1 - cpuTimeRatio);
         ctx.fillRect(rect.left, rect.top, firstPartWidth, SLICE_HEIGHT);
         ctx.fillStyle =
-          colorForThreadIdleSlice(hue, saturation, lightness, hasFocus);
+            colorForThreadIdleSlice(hue, saturation, lightness, hasFocus);
         ctx.fillRect(
-          rect.left + firstPartWidth,
-          rect.top,
-          secondPartWidth,
-          SLICE_HEIGHT);
+            rect.left + firstPartWidth,
+            rect.top,
+            secondPartWidth,
+            SLICE_HEIGHT);
       } else {
         ctx.fillRect(rect.left, rect.top, rect.width, SLICE_HEIGHT);
       }
@@ -340,7 +339,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
           ctx.beginPath();
           ctx.lineWidth = 3;
           ctx.strokeRect(
-            rect.left, rect.top - 1.5, rect.width, SLICE_HEIGHT + 3);
+              rect.left, rect.top - 1.5, rect.width, SLICE_HEIGHT + 3);
           ctx.closePath();
         };
       }
@@ -367,10 +366,10 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     ctx.fill();
   }
 
-  getSliceIndex({ x, y }: { x: number, y: number }): number | void {
+  getSliceIndex({x, y}: {x: number, y: number}): number|void {
     const data = this.data();
     if (data === undefined) return;
-    const { timeScale } = globals.frontendLocalState;
+    const {timeScale} = globals.frontendLocalState;
     if (y < TRACK_PADDING) return;
     const instantWidthTime = timeScale.deltaPxToDuration(HALF_CHEVRON_WIDTH_PX);
     const t = timeScale.pxToTime(x);
@@ -396,25 +395,25 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     }
   }
 
-  onMouseMove({ x, y }: { x: number, y: number }) {
+  onMouseMove({x, y}: {x: number, y: number}) {
     this.hoveredTitleId = -1;
-    globals.dispatch(Actions.setHighlightedSliceId({ sliceId: -1 }));
-    const sliceIndex = this.getSliceIndex({ x, y });
+    globals.dispatch(Actions.setHighlightedSliceId({sliceId: -1}));
+    const sliceIndex = this.getSliceIndex({x, y});
     if (sliceIndex === undefined) return;
     const data = this.data();
     if (data === undefined) return;
     this.hoveredTitleId = data.titles[sliceIndex];
     const sliceId = data.sliceIds[sliceIndex];
-    globals.dispatch(Actions.setHighlightedSliceId({ sliceId }));
+    globals.dispatch(Actions.setHighlightedSliceId({sliceId}));
   }
 
   onMouseOut() {
     this.hoveredTitleId = -1;
-    globals.dispatch(Actions.setHighlightedSliceId({ sliceId: -1 }));
+    globals.dispatch(Actions.setHighlightedSliceId({sliceId: -1}));
   }
 
-  onMouseClick({ x, y }: { x: number, y: number }): boolean {
-    const sliceIndex = this.getSliceIndex({ x, y });
+  onMouseClick({x, y}: {x: number, y: number}): boolean {
+    const sliceIndex = this.getSliceIndex({x, y});
     if (sliceIndex === undefined) return false;
     const data = this.data();
     if (data === undefined) return false;
@@ -435,10 +434,10 @@ export class ChromeSliceTrack extends Track<Config, Data> {
   }
 
   getSliceRect(tStart: number, tEnd: number, depth: number): SliceRect
-    | undefined {
-    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
+      |undefined {
+    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
     const pxEnd = timeScale.timeToPx(visibleWindowTime.end);
-    const left = Math.max(timeScale.timeToPx(tStart), -TRACE_MARGIN_TIME_S);
+    const left = Math.max(timeScale.timeToPx(tStart), 0);
     const right = Math.min(timeScale.timeToPx(tEnd), pxEnd);
     return {
       left,
@@ -446,7 +445,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
       top: TRACK_PADDING + depth * SLICE_HEIGHT,
       height: SLICE_HEIGHT,
       visible:
-        !(tEnd <= visibleWindowTime.start || tStart >= visibleWindowTime.end),
+          !(tEnd <= visibleWindowTime.start || tStart >= visibleWindowTime.end),
     };
   }
 }

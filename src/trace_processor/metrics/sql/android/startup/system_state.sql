@@ -17,42 +17,41 @@
 -- Functions useful for filling the SystemState proto which gives
 -- context to what was happening on the system during a startup.
 
--- Given a launch id and process name glob, returns whether a process with
+SELECT IMPORT('android.startup.startups');
+
+-- Given a launch id and process name glob, returns the sched.dur if a process with
 -- that name was running on a CPU concurrent to that launch.
 SELECT CREATE_FUNCTION(
-  'IS_PROCESS_RUNNING_CONCURRENT_TO_LAUNCH(launch_id INT, process_glob STRING)',
-  'BOOL',
+  'DUR_OF_PROCESS_RUNNING_CONCURRENT_TO_LAUNCH(startup_id INT, process_glob STRING)',
+  'INT',
   '
-    SELECT EXISTS(
-      SELECT sched.dur
+      SELECT IFNULL(SUM(sched.dur), 0)
       FROM sched
       JOIN thread USING (utid)
       JOIN process USING (upid)
       JOIN (
         SELECT ts, ts_end
-        FROM launches
-        WHERE id = $launch_id
+        FROM android_startups
+        WHERE startup_id = $startup_id
       ) launch
       WHERE
         process.name GLOB $process_glob AND
         sched.ts BETWEEN launch.ts AND launch.ts_end
-      LIMIT 1
-    )
   '
 );
 
 -- Given a launch id and slice name glob, returns the number of slices with that
 -- name which start concurrent to that launch.
 SELECT CREATE_FUNCTION(
-  'COUNT_SLICES_CONCURRENT_TO_LAUNCH(launch_id INT, slice_glob STRING)',
+  'COUNT_SLICES_CONCURRENT_TO_LAUNCH(startup_id INT, slice_glob STRING)',
   'INT',
   '
     SELECT COUNT(1)
     FROM slice
     JOIN (
       SELECT ts, ts_end
-      FROM launches
-      WHERE id = $launch_id
+      FROM android_startups
+      WHERE startup_id = $startup_id
     ) launch
     WHERE
       slice.name GLOB $slice_glob AND

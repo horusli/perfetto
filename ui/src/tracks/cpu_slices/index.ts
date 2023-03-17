@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { search, searchEq, searchSegment } from '../../base/binary_search';
-import { assertTrue } from '../../base/logging';
-import { Actions } from '../../common/actions';
+import {search, searchEq, searchSegment} from '../../base/binary_search';
+import {assertTrue} from '../../base/logging';
+import {Actions} from '../../common/actions';
 import {
   cropText,
   drawDoubleHeadedArrow,
@@ -28,9 +28,9 @@ import { TrackData } from '../../common/track_data';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import { checkerboardExcept } from '../../frontend/checkerboard';
-import { globals } from '../../frontend/globals';
-import { NewTrackArgs, Track } from '../../frontend/track';
+import {checkerboardExcept} from '../../frontend/checkerboard';
+import {globals} from '../../frontend/globals';
+import {NewTrackArgs, Track} from '../../frontend/track';
 
 export const CPU_SLICE_TRACK_KIND = 'CpuSliceTrack';
 
@@ -76,7 +76,7 @@ class CpuSliceTrackController extends TrackController<Config, Data> {
     const queryLastSlice = await this.query(`
     select max(id) as lastSliceId from ${this.tableName('sched')}
     `);
-    this.lastRowId = queryLastSlice.firstRow({ lastSliceId: NUM }).lastSliceId;
+    this.lastRowId = queryLastSlice.firstRow({lastSliceId: NUM}).lastSliceId;
 
     const row = queryRes.firstRow({ maxDur: NUM, rowCount: NUM });
     this.maxDurPs = row.maxDur;
@@ -123,7 +123,7 @@ class CpuSliceTrackController extends TrackController<Config, Data> {
       `cached_tsq / ${bucketPs} * ${bucketPs}` :
       `(ts + ${bucketPs / 2}) / ${bucketPs} * ${bucketPs}`;
     const queryTable =
-      isCached ? this.tableName('sched_cached') : this.tableName('sched');
+        isCached ? this.tableName('sched_cached') : this.tableName('sched');
     const constraintColumn = isCached ? 'cached_tsq' : 'ts';
 
     const queryRes = await this.query(`
@@ -157,7 +157,7 @@ class CpuSliceTrackController extends TrackController<Config, Data> {
     };
 
     const it = queryRes.iter(
-      { tsq: NUM, ts: NUM, dur: NUM, utid: NUM, id: NUM, isIncomplete: NUM });
+        {tsq: NUM, ts: NUM, dur: NUM, utid: NUM, id: NUM, isIncomplete: NUM});
     for (let row = 0; it.valid(); it.next(), row++) {
       const startPsQ = it.tsq;
       const startPs = it.ts;
@@ -210,7 +210,7 @@ class CpuSliceTrack extends Track<Config, Data> {
     return new CpuSliceTrack(args);
   }
 
-  private mousePos?: { x: number, y: number };
+  private mousePos?: {x: number, y: number};
   private utidHoveredInThisTrack = -1;
 
   constructor(args: NewTrackArgs) {
@@ -223,7 +223,7 @@ class CpuSliceTrack extends Track<Config, Data> {
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
     // TODO: fonts and colors should come from the CSS and not hardcoded here.
-    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
+    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
     const data = this.data();
 
     if (data === undefined) return;  // Can't possibly draw anything.
@@ -231,18 +231,18 @@ class CpuSliceTrack extends Track<Config, Data> {
     // If the cached trace slices don't fully cover the visible time range,
     // show a gray rectangle with a "Loading..." label.
     checkerboardExcept(
-      ctx,
-      this.getHeight(),
-      timeScale.timeToPx(visibleWindowTime.start),
-      timeScale.timeToPx(visibleWindowTime.end),
-      timeScale.timeToPx(data.start),
-      timeScale.timeToPx(data.end));
+        ctx,
+        this.getHeight(),
+        timeScale.timeToPx(visibleWindowTime.start),
+        timeScale.timeToPx(visibleWindowTime.end),
+        timeScale.timeToPx(data.start),
+        timeScale.timeToPx(data.end));
 
     this.renderSlices(ctx, data);
   }
 
   renderSlices(ctx: CanvasRenderingContext2D, data: Data): void {
-    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
+    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
     assertTrue(data.starts.length === data.ends.length);
     assertTrue(data.starts.length === data.utids.length);
 
@@ -251,7 +251,7 @@ class CpuSliceTrack extends Track<Config, Data> {
     const charWidth = ctx.measureText('dbpqaouk').width / 8;
 
     const rawStartIdx =
-      data.ends.findIndex((end) => end >= visibleWindowTime.start);
+        data.ends.findIndex((end) => end >= visibleWindowTime.start);
     const startIdx = rawStartIdx === -1 ? 0 : rawStartIdx;
 
     const [, rawEndIdx] = searchSegment(data.starts, visibleWindowTime.end);
@@ -355,27 +355,27 @@ class CpuSliceTrack extends Track<Config, Data> {
           const wakeupPos = timeScale.timeToPx(details.wakeupTs);
           const latencyWidth = rectStart - wakeupPos;
           drawDoubleHeadedArrow(
-            ctx,
-            wakeupPos,
-            MARGIN_TOP + RECT_HEIGHT,
-            latencyWidth,
-            latencyWidth >= 20);
+              ctx,
+              wakeupPos,
+              MARGIN_TOP + RECT_HEIGHT,
+              latencyWidth,
+              latencyWidth >= 20);
           // Latency time with a white semi-transparent background.
           const displayText = timeToString(tStart - details.wakeupTs);
           const measured = ctx.measureText(displayText);
           if (latencyWidth >= measured.width + 2) {
             ctx.fillStyle = 'rgba(255,255,255,0.7)';
             ctx.fillRect(
-              wakeupPos + latencyWidth / 2 - measured.width / 2 - 1,
-              MARGIN_TOP + RECT_HEIGHT - 12,
-              measured.width + 2,
-              11);
+                wakeupPos + latencyWidth / 2 - measured.width / 2 - 1,
+                MARGIN_TOP + RECT_HEIGHT - 12,
+                measured.width + 2,
+                11);
             ctx.textBaseline = 'bottom';
             ctx.fillStyle = 'black';
             ctx.fillText(
-              displayText,
-              wakeupPos + (latencyWidth) / 2,
-              MARGIN_TOP + RECT_HEIGHT - 1);
+                displayText,
+                wakeupPos + (latencyWidth) / 2,
+                MARGIN_TOP + RECT_HEIGHT - 1);
           }
         }
       }
@@ -408,14 +408,14 @@ class CpuSliceTrack extends Track<Config, Data> {
     }
   }
 
-  onMouseMove(pos: { x: number, y: number }) {
+  onMouseMove(pos: {x: number, y: number}) {
     const data = this.data();
     this.mousePos = pos;
     if (data === undefined) return;
-    const { timeScale } = globals.frontendLocalState;
+    const {timeScale} = globals.frontendLocalState;
     if (pos.y < MARGIN_TOP || pos.y > MARGIN_TOP + RECT_HEIGHT) {
       this.utidHoveredInThisTrack = -1;
-      globals.dispatch(Actions.setHoveredUtidAndPid({ utid: -1, pid: -1 }));
+      globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
       return;
     }
     const t = timeScale.pxToTime(pos.x);
@@ -434,25 +434,25 @@ class CpuSliceTrack extends Track<Config, Data> {
     const threadInfo = globals.threads.get(hoveredUtid);
     const hoveredPid = threadInfo ? (threadInfo.pid ? threadInfo.pid : -1) : -1;
     globals.dispatch(
-      Actions.setHoveredUtidAndPid({ utid: hoveredUtid, pid: hoveredPid }));
+        Actions.setHoveredUtidAndPid({utid: hoveredUtid, pid: hoveredPid}));
   }
 
   onMouseOut() {
     this.utidHoveredInThisTrack = -1;
-    globals.dispatch(Actions.setHoveredUtidAndPid({ utid: -1, pid: -1 }));
+    globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
     this.mousePos = undefined;
   }
 
-  onMouseClick({ x }: { x: number }) {
+  onMouseClick({x}: {x: number}) {
     const data = this.data();
     if (data === undefined) return false;
-    const { timeScale } = globals.frontendLocalState;
+    const {timeScale} = globals.frontendLocalState;
     const time = timeScale.pxToTime(x);
     const index = search(data.starts, time);
     const id = index === -1 ? undefined : data.ids[index];
     if (!id || this.utidHoveredInThisTrack === -1) return false;
     globals.makeSelection(
-      Actions.selectSlice({ id, trackId: this.trackState.id }));
+        Actions.selectSlice({id, trackId: this.trackState.id}));
     return true;
   }
 }

@@ -28,8 +28,8 @@ import {
   SLICE_TRACK_KIND,
 } from '../tracks/chrome_slices';
 
-import { Controller } from './controller';
-import { globals } from './globals';
+import {Controller} from './controller';
+import {globals} from './globals';
 
 export interface FlowEventsControllerArgs {
   engine: Engine;
@@ -39,7 +39,7 @@ const SHOW_INDIRECT_PRECEDING_FLOWS_FLAG = featureFlags.register({
   id: 'showIndirectPrecedingFlows',
   name: 'Show indirect preceding flows',
   description: 'Show indirect preceding flows (connected through ancestor ' +
-    'slices) when a slice is selected.',
+      'slices) when a slice is selected.',
   defaultValue: false,
 });
 
@@ -47,7 +47,7 @@ const SHOW_INDIRECT_PRECEDING_FLOWS_FLAG = featureFlags.register({
 export class FlowEventsController extends Controller<'main'> {
   private lastSelectedSliceId?: number;
   private lastSelectedArea?: Area;
-  private lastSelectedKind: 'CHROME_SLICE' | 'AREA' | 'NONE' = 'NONE';
+  private lastSelectedKind: 'CHROME_SLICE'|'AREA'|'NONE' = 'NONE';
 
   constructor(private args: FlowEventsControllerArgs) {
     super('main');
@@ -110,9 +110,9 @@ export class FlowEventsController extends Controller<'main'> {
         const beginSliceId = it.beginSliceId;
         const beginTrackId = it.beginTrackId;
         const beginSliceName =
-          it.beginSliceName === null ? 'NULL' : it.beginSliceName;
+            it.beginSliceName === null ? 'NULL' : it.beginSliceName;
         const beginSliceChromeCustomName =
-          it.beginSliceChromeCustomName === null ?
+            it.beginSliceChromeCustomName === null ?
             undefined :
             it.beginSliceChromeCustomName;
         const beginSliceCategory =
@@ -121,26 +121,26 @@ export class FlowEventsController extends Controller<'main'> {
         const beginSliceEndTs = fromPs(it.beginSliceEndTs);
         const beginDepth = it.beginDepth;
         const beginThreadName =
-          it.beginThreadName === null ? 'NULL' : it.beginThreadName;
+            it.beginThreadName === null ? 'NULL' : it.beginThreadName;
         const beginProcessName =
-          it.beginProcessName === null ? 'NULL' : it.beginProcessName;
+            it.beginProcessName === null ? 'NULL' : it.beginProcessName;
 
         const endSliceId = it.endSliceId;
         const endTrackId = it.endTrackId;
         const endSliceName =
-          it.endSliceName === null ? 'NULL' : it.endSliceName;
+            it.endSliceName === null ? 'NULL' : it.endSliceName;
         const endSliceChromeCustomName = it.endSliceChromeCustomName === null ?
-          undefined :
-          it.endSliceChromeCustomName;
+            undefined :
+            it.endSliceChromeCustomName;
         const endSliceCategory =
           it.endSliceCategory === null ? 'NULL' : it.endSliceCategory;
         const endSliceStartTs = fromPs(it.endSliceStartTs);
         const endSliceEndTs = fromPs(it.endSliceEndTs);
         const endDepth = it.endDepth;
         const endThreadName =
-          it.endThreadName === null ? 'NULL' : it.endThreadName;
+            it.endThreadName === null ? 'NULL' : it.endThreadName;
         const endProcessName =
-          it.endProcessName === null ? 'NULL' : it.endProcessName;
+            it.endProcessName === null ? 'NULL' : it.endProcessName;
 
         // Category and name present only in version 1 flow events
         // It is most likelly NULL for all other versions
@@ -185,19 +185,19 @@ export class FlowEventsController extends Controller<'main'> {
 
   sliceSelected(sliceId: number) {
     if (this.lastSelectedKind === 'CHROME_SLICE' &&
-      this.lastSelectedSliceId === sliceId) {
+        this.lastSelectedSliceId === sliceId) {
       return;
     }
     this.lastSelectedSliceId = sliceId;
     this.lastSelectedKind = 'CHROME_SLICE';
 
     const connectedFlows = SHOW_INDIRECT_PRECEDING_FLOWS_FLAG.get() ?
-      `(
+        `(
            select * from directly_connected_flow(${sliceId})
            union
            select * from preceding_flow(${sliceId})
          )` :
-      `directly_connected_flow(${sliceId})`;
+        `directly_connected_flow(${sliceId})`;
 
     const query = `
     select
@@ -235,15 +235,15 @@ export class FlowEventsController extends Controller<'main'> {
     left join process process_in on process_in.upid = thread_in.upid
     `;
     this.queryFlowEvents(
-      query, (flows: Flow[]) => publishConnectedFlows(flows));
+        query, (flows: Flow[]) => publishConnectedFlows(flows));
   }
 
   areaSelected(areaId: string) {
     const area = globals.state.areas[areaId];
     if (this.lastSelectedKind === 'AREA' && this.lastSelectedArea &&
-      this.lastSelectedArea.tracks.join(',') === area.tracks.join(',') &&
-      this.lastSelectedArea.endSec === area.endSec &&
-      this.lastSelectedArea.startSec === area.startSec) {
+        this.lastSelectedArea.tracks.join(',') === area.tracks.join(',') &&
+        this.lastSelectedArea.endSec === area.endSec &&
+        this.lastSelectedArea.startSec === area.startSec) {
       return;
     }
 
@@ -322,7 +322,7 @@ export class FlowEventsController extends Controller<'main'> {
     // TODO(b/155483804): This is a hack as annotation slices don't contain
     // flows. We should tidy this up when fixing this bug.
     if (selection && selection.kind === 'CHROME_SLICE' &&
-      selection.table !== 'annotation') {
+        selection.table !== 'annotation') {
       this.sliceSelected(selection.id);
     } else {
       publishConnectedFlows([]);

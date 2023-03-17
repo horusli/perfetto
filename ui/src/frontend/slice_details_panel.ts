@@ -19,10 +19,10 @@ import { drawDoubleHeadedArrow } from '../common/canvas_utils';
 import { translateState } from '../common/thread_state';
 import { timeToCode, toPs } from '../common/time';
 
-import { globals, SliceDetails, ThreadDesc } from './globals';
-import { PanelSize } from './panel';
-import { scrollToTrackAndTs } from './scroll_helper';
-import { SlicePanel } from './slice_panel';
+import {globals, SliceDetails, ThreadDesc} from './globals';
+import {PanelSize} from './panel';
+import {scrollToTrackAndTs} from './scroll_helper';
+import {SlicePanel} from './slice_panel';
 
 export class SliceDetailsPanel extends SlicePanel {
   view() {
@@ -31,18 +31,18 @@ export class SliceDetailsPanel extends SlicePanel {
     const threadInfo = globals.threads.get(sliceInfo.utid);
 
     return m(
-      '.details-panel',
-      m('.details-panel-heading',
-        m('h2.split', `Slice Details`),
-        (sliceInfo.wakeupTs && sliceInfo.wakerUtid) ?
-          m('h2.split', 'Scheduling Latency') :
-          ''),
-      this.getDetails(sliceInfo, threadInfo));
+        '.details-panel',
+        m('.details-panel-heading',
+          m('h2.split', `Slice Details`),
+          (sliceInfo.wakeupTs && sliceInfo.wakerUtid) ?
+              m('h2.split', 'Scheduling Latency') :
+              ''),
+        this.getDetails(sliceInfo, threadInfo));
   }
 
-  getDetails(sliceInfo: SliceDetails, threadInfo: ThreadDesc | undefined) {
+  getDetails(sliceInfo: SliceDetails, threadInfo: ThreadDesc|undefined) {
     if (!threadInfo || sliceInfo.ts === undefined ||
-      sliceInfo.dur === undefined) {
+        sliceInfo.dur === undefined) {
       return null;
     } else {
       const tableRows = [
@@ -56,7 +56,7 @@ export class SliceDetailsPanel extends SlicePanel {
             //`${threadInfo.threadName} [${threadInfo.tid}]`,
             `${threadInfo.threadName}`,
             m('i.material-icons.grey',
-              { onclick: () => this.goToThread(), title: 'Go to thread' },
+              {onclick: () => this.goToThread(), title: 'Go to thread'},
               'call_made'))),
         m('tr', m('th', `Cmdline`), m('td', threadInfo.cmdline)),
         m('tr', m('th', `Start time`), m('td', `${timeToCode(sliceInfo.ts)}`)),
@@ -64,12 +64,12 @@ export class SliceDetailsPanel extends SlicePanel {
           m('th', `Duration`),
           m('td', this.computeDuration(sliceInfo.ts, sliceInfo.dur))),
         (sliceInfo.threadDur === undefined ||
-          sliceInfo.threadTs === undefined) ?
-          '' :
-          m('tr',
-            m('th', 'Thread duration'),
-            m('td',
-              this.computeDuration(sliceInfo.threadTs, sliceInfo.threadDur))),
+         sliceInfo.threadTs === undefined) ?
+            '' :
+            m('tr',
+              m('th', 'Thread duration'),
+              m('td',
+                this.computeDuration(sliceInfo.threadTs, sliceInfo.threadDur))),
         m('tr', m('th', `Prio`), m('td', `${sliceInfo.priority}`)),
         m('tr',
           m('th', `End State`),
@@ -86,8 +86,8 @@ export class SliceDetailsPanel extends SlicePanel {
       }
 
       return m(
-        '.details-table',
-        m('table.half-width-panel', tableRows),
+          '.details-table',
+          m('table.half-width-panel', tableRows),
       );
     }
   }
@@ -98,15 +98,15 @@ export class SliceDetailsPanel extends SlicePanel {
     const threadInfo = globals.threads.get(sliceInfo.utid);
 
     if (sliceInfo.id === undefined || sliceInfo.ts === undefined ||
-      sliceInfo.dur === undefined || sliceInfo.cpu === undefined ||
-      threadInfo === undefined) {
+        sliceInfo.dur === undefined || sliceInfo.cpu === undefined ||
+        threadInfo === undefined) {
       return;
     }
 
-    let trackId: string | number | undefined;
+    let trackId: string|number|undefined;
     for (const track of Object.values(globals.state.tracks)) {
       if (track.kind === 'ThreadStateTrack' &&
-        (track.config as { utid: number }).utid === threadInfo.utid) {
+          (track.config as {utid: number}).utid === threadInfo.utid) {
         trackId = track.id;
       }
     }
@@ -129,7 +129,7 @@ export class SliceDetailsPanel extends SlicePanel {
     if (details.wakeupTs && details.wakerUtid !== undefined) {
       const threadInfo = globals.threads.get(details.wakerUtid);
       // Draw diamond and vertical line.
-      const startDraw = { x: size.width / 2 + 20, y: 52 };
+      const startDraw = {x: size.width / 2 + 20, y: 52};
       ctx.beginPath();
       ctx.moveTo(startDraw.x, startDraw.y + 28);
       ctx.fillStyle = 'black';
@@ -162,9 +162,9 @@ export class SliceDetailsPanel extends SlicePanel {
           (details.wakeupTs - globals.state.traceTime.startSec))}`;
         ctx.fillText(displayLatency, startDraw.x + 70, startDraw.y + 86);
         const explain1 =
-          'This is the interval from when the task became eligible to run';
+            'This is the interval from when the task became eligible to run';
         const explain2 =
-          '(e.g. because of notifying a wait queue it was suspended on) to';
+            '(e.g. because of notifying a wait queue it was suspended on) to';
         const explain3 = 'when it started running.';
         ctx.font = '10px Roboto Condensed';
         ctx.fillText(explain1, startDraw.x + 70, startDraw.y + 86 + 16);

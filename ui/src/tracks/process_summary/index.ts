@@ -21,9 +21,9 @@ import { LIMIT } from '../../common/track_data';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import { checkerboardExcept } from '../../frontend/checkerboard';
-import { globals } from '../../frontend/globals';
-import { NewTrackArgs, Track } from '../../frontend/track';
+import {checkerboardExcept} from '../../frontend/checkerboard';
+import {globals} from '../../frontend/globals';
+import {NewTrackArgs, Track} from '../../frontend/track';
 
 export const PROCESS_SUMMARY_TRACK = 'ProcessSummaryTrack';
 
@@ -35,7 +35,7 @@ export interface Data extends TrackData {
 
 export interface Config {
   pidForColor: number;
-  upid: number | null;
+  upid: number|null;
   utid: number;
 }
 
@@ -52,33 +52,33 @@ class ProcessSummaryTrackController extends TrackController<Config, Data> {
 
     if (this.setup === false) {
       await this.query(
-        `create virtual table ${this.tableName('window')} using window;`);
+          `create virtual table ${this.tableName('window')} using window;`);
 
       let utids = [this.config.utid];
       if (this.config.upid) {
         const threadQuery = await this.query(
-          `select utid from thread where upid=${this.config.upid}`);
+            `select utid from thread where upid=${this.config.upid}`);
         utids = [];
-        for (const it = threadQuery.iter({ utid: NUM }); it.valid(); it.next()) {
+        for (const it = threadQuery.iter({utid: NUM}); it.valid(); it.next()) {
           utids.push(it.utid);
         }
       }
 
       const trackQuery = await this.query(
-        `select id from thread_track where utid in (${utids.join(',')})`);
+          `select id from thread_track where utid in (${utids.join(',')})`);
       const tracks = [];
-      for (const it = trackQuery.iter({ id: NUM }); it.valid(); it.next()) {
+      for (const it = trackQuery.iter({id: NUM}); it.valid(); it.next()) {
         tracks.push(it.id);
       }
 
       const processSliceView = this.tableName('process_slice_view');
       await this.query(
-        `create view ${processSliceView} as ` +
-        // 0 as cpu is a dummy column to perform span join on.
-        `select ts, dur/${utids.length} as dur ` +
-        `from slice s ` +
-        `where depth = 0 and track_id in ` +
-        `(${tracks.join(',')})`);
+          `create view ${processSliceView} as ` +
+          // 0 as cpu is a dummy column to perform span join on.
+          `select ts, dur/${utids.length} as dur ` +
+          `from slice s ` +
+          `where depth = 0 and track_id in ` +
+          `(${tracks.join(',')})`);
       await this.query(`create virtual table ${this.tableName('span')}
           using span_join(${processSliceView},
                           ${this.tableName('window')});`);
@@ -126,7 +126,7 @@ class ProcessSummaryTrackController extends TrackController<Config, Data> {
     };
 
     const queryRes = await this.query(query);
-    const it = queryRes.iter({ bucket: NUM, utilization: NUM });
+    const it = queryRes.iter({bucket: NUM, utilization: NUM});
     for (; it.valid(); it.next()) {
       const bucket = it.bucket;
       if (bucket > numBuckets) {
@@ -167,24 +167,24 @@ class ProcessSummaryTrack extends Track<Config, Data> {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
-    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
+    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
     const data = this.data();
     if (data === undefined) return;  // Can't possibly draw anything.
 
     checkerboardExcept(
-      ctx,
-      this.getHeight(),
-      timeScale.timeToPx(visibleWindowTime.start),
-      timeScale.timeToPx(visibleWindowTime.end),
-      timeScale.timeToPx(data.start),
-      timeScale.timeToPx(data.end));
+        ctx,
+        this.getHeight(),
+        timeScale.timeToPx(visibleWindowTime.start),
+        timeScale.timeToPx(visibleWindowTime.end),
+        timeScale.timeToPx(data.start),
+        timeScale.timeToPx(data.end));
 
     this.renderSummary(ctx, data);
   }
 
   // TODO(dproy): Dedup with CPU slices.
   renderSummary(ctx: CanvasRenderingContext2D, data: Data): void {
-    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
+    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
     const startPx = Math.floor(timeScale.timeToPx(visibleWindowTime.start));
     const bottomY = TRACK_HEIGHT;
 

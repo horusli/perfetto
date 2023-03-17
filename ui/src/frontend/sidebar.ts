@@ -14,27 +14,33 @@
 
 import * as m from 'mithril';
 
-import { assertExists, assertTrue } from '../base/logging';
-import { Actions } from '../common/actions';
-import { getCurrentChannel } from '../common/channels';
-import { TRACE_SUFFIX } from '../common/constants';
-import { ConversionJobStatus } from '../common/conversion_jobs';
-import { Engine } from '../common/engine';
-import { featureFlags } from '../common/feature_flags';
-import { EngineMode, TraceArrayBufferSource } from '../common/state';
+//import {assertExists, assertTrue} from '../base/logging';
+import {assertExists} from '../base/logging';
+import {Actions} from '../common/actions';
+import {getCurrentChannel} from '../common/channels';
+import {TRACE_SUFFIX} from '../common/constants';
+import {ConversionJobStatus} from '../common/conversion_jobs';
+import {Engine} from '../common/engine';
+import {featureFlags} from '../common/feature_flags';
+import {
+  disableMetatracingAndGetTrace,
+  //enableMetatracing,
+  isMetatracingEnabled,
+} from '../common/metatracing';
+import {EngineMode, TraceArrayBufferSource} from '../common/state';
 //import * as version from '../gen/perfetto_version';
 
-import { Animation } from './animation';
-import { onClickCopy } from './clipboard';
-import { globals } from './globals';
-import { toggleHelp } from './help_modal';
+import {Animation} from './animation';
+import {onClickCopy} from './clipboard';
+import {globals} from './globals';
+import {toggleHelp} from './help_modal';
 import {
   isLegacyTrace,
   openFileWithLegacyTraceViewer,
 } from './legacy_trace_viewer';
-import { showModal } from './modal';
-import { Router } from './router';
-import { isDownloadable, isShareable } from './trace_attrs';
+import {showModal} from './modal';
+import {Router} from './router';
+import {isDownloadable, isShareable} from './trace_attrs';
 import {
   convertToJson,
   //convertTraceToJsonAndDownload,
@@ -147,7 +153,7 @@ function showDebugTrack(): (_: Event) => void {
     globals.dispatch(Actions.addDebugTrack({
       // The debug track will only be shown once we have a currentEngineId which
       // is not undefined.
-      engineId: assertExists(globals.state.currentEngineId),
+      engineId: assertExists(globals.state.engine).id,
       name: 'Debug Slices',
     }));
   };
@@ -161,7 +167,7 @@ function showDebugTrack(): (_: Event) => void {
 
 interface SectionItem {
   t: string;
-  a: string | ((e: Event) => void);
+  a: string|((e: Event) => void);
   i: string;
   isPending?: () => boolean;
   isVisible?: () => boolean;
@@ -205,14 +211,14 @@ const SECTIONS: Section[] = [
     hideIfNoTraceLoaded: true,
     appendOpenedTraceTitle: true,
     items: [
-      { t: 'Show timeline', a: navigateViewer, i: 'line_style' },
+      {t: 'Show timeline', a: navigateViewer, i: 'line_style'},
       {
         t: 'Share',
         a: shareTrace,
         i: 'share',
         internalUserOnly: true,
         isPending: () => globals.getConversionJobStatus('create_permalink') ===
-          ConversionJobStatus.InProgress,
+            ConversionJobStatus.InProgress,
       },
       {
         t: 'Download',
@@ -287,7 +293,7 @@ const SECTIONS: Section[] = [
         t: 'Show Debug Track',
         a: showDebugTrack(),
         i: 'view_day',
-        isVisible: () => globals.state.currentEngineId !== undefined,
+        isVisible: () => globals.state.engine !== undefined,
       },
       //{
       //  t: 'Record metatrace',
@@ -480,7 +486,7 @@ function onInputElementFileSelectionChanged(e: Event) {
   }
 
   globals.logging.logEvent('Trace Actions', 'Open trace from file');
-  globals.dispatch(Actions.openTraceFromFile({ file }));
+  globals.dispatch(Actions.openTraceFromFile({file}));
 }
 
 async function openWithLegacyUi(file: File) {
@@ -505,19 +511,19 @@ function openInOldUIWithSizeCheck(trace: Blob) {
   showModal({
     title: 'Legacy UI may fail to open this trace',
     content:
-      m('div',
-        m('p',
-          `This trace is ${size}mb, opening it in the legacy UI ` +
-          `may fail.`),
-        m('p',
-          'More options can be found at ',
-          m('a',
-            {
-              href: 'https://goto.google.com/opening-large-traces',
-              target: '_blank',
-            },
-            'go/opening-large-traces'),
-          '.')),
+        m('div',
+          m('p',
+            `This trace is ${size}mb, opening it in the legacy UI ` +
+                `may fail.`),
+          m('p',
+            'More options can be found at ',
+            m('a',
+              {
+                href: 'https://goto.google.com/opening-large-traces',
+                target: '_blank',
+              },
+              'go/opening-large-traces'),
+            '.')),
     buttons: [
       {
         text: 'Open full trace (not recommended)',
@@ -576,9 +582,9 @@ function shareTrace(e: Event) {
   // a url, create a pseudo-permalink by echoing back the URL.
   if (!isShareable()) {
     const msg =
-      [m('p',
-        'This trace was opened by an external site and as such cannot ' +
-        'be re-shared preserving the UI state.')];
+        [m('p',
+           'This trace was opened by an external site and as such cannot ' +
+               'be re-shared preserving the UI state.')];
     if (traceUrl) {
       msg.push(m('p', 'By using the URL below you can open this trace again.'));
       msg.push(m('p', 'Clicking will copy the URL into the clipboard.'));
@@ -595,11 +601,11 @@ function shareTrace(e: Event) {
   if (!isShareable() || !isTraceLoaded()) return;
 
   const result = confirm(
-    `Upload UI state and generate a permalink. ` +
-    `The trace will be accessible by anybody with the permalink.`);
+      `Upload UI state and generate a permalink. ` +
+      `The trace will be accessible by anybody with the permalink.`);
   if (result) {
     globals.logging.logEvent('Trace Actions', 'Create permalink');
-    globals.dispatch(Actions.createPermalink({ isRecordingConfig: false }));
+    globals.dispatch(Actions.createPermalink({isRecordingConfig: false}));
   }
 }
 
@@ -628,9 +634,9 @@ function downloadTrace(e: Event) {
     url = src.url;
     fileName = url.split('/').slice(-1)[0];
   } else if (src.type === 'ARRAY_BUFFER') {
-    const blob = new Blob([src.buffer], { type: 'application/octet-stream' });
+    const blob = new Blob([src.buffer], {type: 'application/octet-stream'});
     const inputFileName =
-      window.prompt('Please enter a name for your file or leave blank');
+        window.prompt('Please enter a name for your file or leave blank');
     if (inputFileName) {
       fileName = `${inputFileName}.perfetto_trace.gz`;
     } else if (src.fileName) {
@@ -647,7 +653,7 @@ function downloadTrace(e: Event) {
   downloadUrl(url, fileName);
 }
 
-function getCurrentEngine(): Engine | undefined {
+function getCurrentEngine(): Engine|undefined {
   const engineId = globals.getCurrentEngine()?.id;
   if (engineId === undefined) return undefined;
   return globals.engines.get(engineId);
@@ -657,7 +663,7 @@ function highPrecisionTimersAvailable(): boolean {
   // High precision timers are available either when the page is cross-origin
   // isolated or when the trace processor is a standalone binary.
   return window.crossOriginIsolated ||
-    globals.getCurrentEngine()?.mode === 'HTTP_RPC';
+      globals.getCurrentEngine()?.mode === 'HTTP_RPC';
 }
 
 //function recordMetatrace(e: Event) {
@@ -705,6 +711,8 @@ async function finaliseMetatrace(e: Event) {
   e.preventDefault();
   globals.logging.logEvent('Trace Actions', 'Finalise metatrace');
 
+  const jsEvents = disableMetatracingAndGetTrace();
+
   const engine = getCurrentEngine();
   if (!engine) return;
 
@@ -713,7 +721,8 @@ async function finaliseMetatrace(e: Event) {
     throw new Error(`Failed to read metatrace: ${result.error}`);
   }
 
-  const blob = new Blob([result.metatrace], { type: 'application/octet-stream' });
+  const blob = new Blob(
+      [result.metatrace, jsEvents], {type: 'application/octet-stream'});
   const url = URL.createObjectURL(blob);
 
   downloadUrl(url, 'metatrace');
@@ -726,12 +735,10 @@ const EngineRPCWidget: m.Component = {
     let title = 'Number of pending SQL queries';
     let label: string;
     let failed = false;
-    let mode: EngineMode | undefined;
+    let mode: EngineMode|undefined;
 
-    // We are assuming we have at most one engine here.
-    const engines = Object.values(globals.state.engines);
-    assertTrue(engines.length <= 1);
-    for (const engine of engines) {
+    const engine = globals.state.engine;
+    if (engine !== undefined) {
       mode = engine.mode;
       if (engine.failed !== undefined) {
         cssClass += '.red';
@@ -747,7 +754,7 @@ const EngineRPCWidget: m.Component = {
     // this will eventually become  consistent once the engine is created.
     if (mode === undefined) {
       if (globals.frontendLocalState.httpRpcState.connected &&
-        globals.state.newEngineMode === 'USE_HTTP_RPC_IF_AVAILABLE') {
+          globals.state.newEngineMode === 'USE_HTTP_RPC_IF_AVAILABLE') {
         mode = 'HTTP_RPC';
       } else {
         mode = 'WASM';
@@ -764,10 +771,10 @@ const EngineRPCWidget: m.Component = {
     }
 
     return m(
-      `.dbg-info-square${cssClass}`,
-      { title },
-      m('div', label),
-      m('div', `${failed ? 'FAIL' : globals.numQueuedQueries}`));
+        `.dbg-info-square${cssClass}`,
+        {title},
+        m('div', label),
+        m('div', `${failed ? 'FAIL' : globals.numQueuedQueries}`));
   },
 };
 
@@ -805,35 +812,35 @@ const ServiceWorkerWidget: m.Component = {
       showModal({
         title: 'Disable service worker?',
         content: m(
-          'div',
-          m('p', `If you continue the service worker will be disabled until
+            'div',
+            m('p', `If you continue the service worker will be disabled until
                       manually re-enabled.`),
-          m('p', `All future requests will be served from the network and the
+            m('p', `All future requests will be served from the network and the
                     UI won't be available offline.`),
-          m('p', `You should do this only if you are debugging the UI
+            m('p', `You should do this only if you are debugging the UI
                     or if you are experiencing caching-related problems.`),
-          m('p', `Disabling will cause a refresh of the UI, the current state
+            m('p', `Disabling will cause a refresh of the UI, the current state
                     will be lost.`),
-        ),
+            ),
         buttons: [
           {
             text: 'Disable and reload',
             primary: true,
             action: () => {
               globals.serviceWorkerController.setBypass(true).then(
-                () => location.reload());
+                  () => location.reload());
             },
           },
-          { text: 'Cancel' },
+          {text: 'Cancel'},
         ],
       });
     };
 
     return m(
-      `.dbg-info-square${cssClass}`,
-      { title, ondblclick: toggle },
-      m('div', 'SW'),
-      m('div', label));
+        `.dbg-info-square${cssClass}`,
+        {title, ondblclick: toggle},
+        m('div', 'SW'),
+        m('div', label));
   },
 };
 
@@ -867,19 +874,19 @@ const SidebarFooter: m.Component = {
 class HiringBanner implements m.ClassComponent {
   view() {
     return m(
-      '.hiring-banner',
-      m('a',
-        {
-          href: 'http://go/perfetto-open-roles',
-          target: '_blank',
-        },
-        'We\'re hiring!'));
+        '.hiring-banner',
+        m('a',
+          {
+            href: 'http://go/perfetto-open-roles',
+            target: '_blank',
+          },
+          'We\'re hiring!'));
   }
 }
 
 export class Sidebar implements m.ClassComponent {
   private _redrawWhileAnimating =
-    new Animation(() => globals.rafScheduler.scheduleFullRedraw());
+      new Animation(() => globals.rafScheduler.scheduleFullRedraw());
   view() {
     if (globals.hideSidebar) return null;
     const vdomSections = [];
@@ -906,18 +913,16 @@ export class Sidebar implements m.ClassComponent {
           continue;
         }
         if (item.checkMetatracingEnabled || item.checkMetatracingDisabled) {
-          const engine = getCurrentEngine();
-          if (!engine) continue;
           if (item.checkMetatracingEnabled === true &&
-            !engine.isMetatracingEnabled()) {
+              !isMetatracingEnabled()) {
             continue;
           }
           if (item.checkMetatracingDisabled === true &&
-            engine.isMetatracingEnabled()) {
+              isMetatracingEnabled()) {
             continue;
           }
           if (item.checkMetatracingDisabled &&
-            !highPrecisionTimersAvailable()) {
+              !highPrecisionTimersAvailable()) {
             attrs.disabled = true;
           }
         }
@@ -934,27 +939,30 @@ export class Sidebar implements m.ClassComponent {
           };
         }
         vdomItems.push(m(
-          'li', m(`a${css}`, attrs, m('i.material-icons', item.i), item.t)));
+            'li', m(`a${css}`, attrs, m('i.material-icons', item.i), item.t)));
       }
       if (section.appendOpenedTraceTitle) {
-        const engines = Object.values(globals.state.engines);
-        if (engines.length === 1) {
+        const engine = globals.state.engine;
+        if (engine !== undefined) {
           let traceTitle = '';
           let traceUrl = '';
-          switch (engines[0].source.type) {
+          switch (engine.source.type) {
             case 'FILE':
               // Split on both \ and / (because C:\Windows\paths\are\like\this).
-              traceTitle = engines[0].source.file.name.split(/[/\\]/).pop()!;
-              const fileSizeMB = Math.ceil(engines[0].source.file.size / 1e6);
+              traceTitle = engine.source.file.name.split(/[/\\]/).pop()!;
+              const fileSizeMB = Math.ceil(engine.source.file.size / 1e6);
               traceTitle += ` (${fileSizeMB} MB)`;
               break;
             case 'URL':
-              traceUrl = engines[0].source.url;
+              traceUrl = engine.source.url;
               traceTitle = traceUrl.split('/').pop()!;
               break;
             case 'ARRAY_BUFFER':
-              traceTitle = engines[0].source.title;
-              traceUrl = engines[0].source.url || '';
+              traceTitle = engine.source.title;
+              traceUrl = engine.source.url || '';
+              const arrayBufferSizeMB =
+                  Math.ceil(engine.source.buffer.byteLength / 1e6);
+              traceTitle += ` (${arrayBufferSizeMB} MB)`;
               break;
             case 'HTTP_RPC':
               traceTitle = 'External trace (RPC)';
@@ -972,51 +980,51 @@ export class Sidebar implements m.ClassComponent {
         }
       }
       vdomSections.push(
-        m(`section${section.expanded ? '.expanded' : ''}`,
-          m('.section-header',
-            {
-              onclick: () => {
-                section.expanded = !section.expanded;
-                globals.rafScheduler.scheduleFullRedraw();
+          m(`section${section.expanded ? '.expanded' : ''}`,
+            m('.section-header',
+              {
+                onclick: () => {
+                  section.expanded = !section.expanded;
+                  globals.rafScheduler.scheduleFullRedraw();
+                },
               },
-            },
-            m('h1', { title: section.summary }, section.title),
-            m('h2', section.summary)),
-          m('.section-content', m('ul', vdomItems))));
+              m('h1', {title: section.summary}, section.title),
+              m('h2', section.summary)),
+            m('.section-content', m('ul', vdomItems))));
     }
     return m(
-      'nav.sidebar',
-      {
-        class: globals.state.sidebarVisible ? 'show-sidebar' : 'hide-sidebar',
-        // 150 here matches --sidebar-timing in the css.
-        ontransitionstart: () => this._redrawWhileAnimating.start(150),
-        ontransitionend: () => this._redrawWhileAnimating.stop(),
-      },
-      shouldShowHiringBanner() ? m(HiringBanner) : null,
-      m(
-        `header.${getCurrentChannel()}`,
-        m(`img[src=${globals.root}assets/brand.png].brand`),
-        m('button.sidebar-button',
-          {
-            onclick: () => {
-              globals.dispatch(Actions.toggleSidebar({}));
-            },
-          },
-          m('i.material-icons',
-            {
-              title: globals.state.sidebarVisible ? 'Hide menu' :
-                'Show menu',
-            },
-            'menu')),
-      ),
-      m('input.trace_file[type=file]',
-        { onchange: onInputElementFileSelectionChanged }),
-      m('.sidebar-scroll',
+        'nav.sidebar',
+        {
+          class: globals.state.sidebarVisible ? 'show-sidebar' : 'hide-sidebar',
+          // 150 here matches --sidebar-timing in the css.
+          ontransitionstart: () => this._redrawWhileAnimating.start(150),
+          ontransitionend: () => this._redrawWhileAnimating.stop(),
+        },
+        shouldShowHiringBanner() ? m(HiringBanner) : null,
         m(
-          '.sidebar-scroll-container',
-          ...vdomSections,
-          m(SidebarFooter),
-        )),
+            `header.${getCurrentChannel()}`,
+            m(`img[src=${globals.root}assets/brand.png].brand`),
+            m('button.sidebar-button',
+              {
+                onclick: () => {
+                  globals.dispatch(Actions.toggleSidebar({}));
+                },
+              },
+              m('i.material-icons',
+                {
+                  title: globals.state.sidebarVisible ? 'Hide menu' :
+                                                        'Show menu',
+                },
+                'menu')),
+            ),
+        m('input.trace_file[type=file]',
+          {onchange: onInputElementFileSelectionChanged}),
+        m('.sidebar-scroll',
+          m(
+              '.sidebar-scroll-container',
+              ...vdomSections,
+              m(SidebarFooter),
+              )),
     );
   }
 }

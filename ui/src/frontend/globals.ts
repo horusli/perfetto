@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { assertExists } from '../base/logging';
-import { Actions, DeferredAction } from '../common/actions';
-import { AggregateData } from '../common/aggregation_data';
-import { Args, ArgsTree } from '../common/arg_types';
+import {assertExists} from '../base/logging';
+import {Actions, DeferredAction} from '../common/actions';
+import {AggregateData} from '../common/aggregation_data';
+import {Args, ArgsTree} from '../common/arg_types';
 import {
   ConversionJobName,
   ConversionJobStatus,
@@ -27,15 +27,16 @@ import { CurrentSearchResults, SearchSummary } from '../common/search_data';
 import { CallsiteInfo, EngineConfig, ProfileType, State } from '../common/state';
 import { fromPs, toPs } from '../common/time';
 
-import { Analytics, initAnalytics } from './analytics';
-import { FrontendLocalState } from './frontend_local_state';
-import { RafScheduler } from './raf_scheduler';
-import { Router } from './router';
-import { ServiceWorkerController } from './service_worker_controller';
+import {Analytics, initAnalytics} from './analytics';
+import {BottomTabList} from './bottom_tab';
+import {FrontendLocalState} from './frontend_local_state';
+import {RafScheduler} from './raf_scheduler';
+import {Router} from './router';
+import {ServiceWorkerController} from './service_worker_controller';
 
 type Dispatch = (action: DeferredAction) => void;
 type TrackDataStore = Map<string, {}>;
-type QueryResultsStore = Map<string, {} | undefined>;
+type QueryResultsStore = Map<string, {}|undefined>;
 type AggregateDataStore = Map<string, AggregateData>;
 type Description = Map<string, string>;
 
@@ -46,7 +47,7 @@ export interface SliceDetails {
   threadTs?: number;
   threadDur?: number;
   priority?: number;
-  endState?: string | null;
+  endState?: string|null;
   cpu?: number;
   id?: number;
   threadStateId?: number;
@@ -184,6 +185,8 @@ function getRoot() {
 class Globals {
   readonly root = getRoot();
 
+  bottomTabList?: BottomTabList = undefined;
+
   private _testing = false;
   private _dispatch?: Dispatch = undefined;
   private _state?: State = undefined;
@@ -191,7 +194,7 @@ class Globals {
   private _rafScheduler?: RafScheduler = undefined;
   private _serviceWorkerController?: ServiceWorkerController = undefined;
   private _logging?: Analytics = undefined;
-  private _isInternalUser: boolean | undefined = undefined;
+  private _isInternalUser: boolean|undefined = undefined;
 
   // TODO(hjd): Unify trackDataStore, queryResults, overviewStore, threads.
   private _trackDataStore?: TrackDataStore = undefined;
@@ -246,7 +249,7 @@ class Globals {
     this._rafScheduler = new RafScheduler();
     this._serviceWorkerController = new ServiceWorkerController();
     this._testing =
-      self.location && self.location.search.indexOf('testing=1') >= 0;
+        self.location && self.location.search.indexOf('testing=1') >= 0;
     this._logging = initAnalytics();
 
     // TODO(hjd): Unify trackDataStore, queryResults, overviewStore, threads.
@@ -271,7 +274,7 @@ class Globals {
   }
 
   get publishRedraw(): () => void {
-    return this._publishRedraw || (() => { });
+    return this._publishRedraw || (() => {});
   }
 
   set publishRedraw(f: () => void) {
@@ -530,18 +533,15 @@ class Globals {
     return resolution;
   }
 
-  getCurrentEngine(): EngineConfig | undefined {
-    if (!this.state.currentEngineId) {
-      return undefined;
-    }
-    return this.state.engines[this.state.currentEngineId];
+  getCurrentEngine(): EngineConfig|undefined {
+    return this.state.engine;
   }
 
   makeSelection(action: DeferredAction<{}>, tabToOpen = 'current_selection') {
     // A new selection should cancel the current search selection.
-    globals.dispatch(Actions.setSearchIndex({ index: -1 }));
+    globals.dispatch(Actions.setSearchIndex({index: -1}));
     const tab = action.type === 'deselect' ? undefined : tabToOpen;
-    globals.dispatch(Actions.setCurrentTab({ tab }));
+    globals.dispatch(Actions.setCurrentTab({tab}));
     globals.dispatch(action);
   }
 

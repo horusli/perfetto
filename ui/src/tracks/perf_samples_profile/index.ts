@@ -22,10 +22,10 @@ import { TrackData } from '../../common/track_data';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import { FLAMEGRAPH_HOVERED_COLOR } from '../../frontend/flamegraph';
-import { globals } from '../../frontend/globals';
-import { TimeScale } from '../../frontend/time_scale';
-import { NewTrackArgs, Track } from '../../frontend/track';
+import {FLAMEGRAPH_HOVERED_COLOR} from '../../frontend/flamegraph';
+import {globals} from '../../frontend/globals';
+import {TimeScale} from '../../frontend/time_scale';
+import {NewTrackArgs, Track} from '../../frontend/track';
 
 export const PERF_SAMPLES_PROFILE_TRACK_KIND = 'PerfSamplesProfileTrack';
 
@@ -40,7 +40,7 @@ export interface Config {
 class PerfSamplesProfileTrackController extends TrackController<Config, Data> {
   static readonly kind = PERF_SAMPLES_PROFILE_TRACK_KIND;
   async onBoundsChange(start: number, end: number, resolution: number):
-    Promise<Data> {
+      Promise<Data> {
     if (this.config.upid === undefined) {
       return {
         start,
@@ -65,7 +65,7 @@ class PerfSamplesProfileTrackController extends TrackController<Config, Data> {
       tsStartsPs: new Float64Array(numRows),
     };
 
-    const it = queryRes.iter({ ts: NUM });
+    const it = queryRes.iter({ts: NUM});
     for (let row = 0; it.valid(); it.next(), row++) {
       data.tsStartsPs[row] = it.ts;
     }
@@ -87,7 +87,7 @@ class PerfSamplesProfileTrack extends Track<Config, Data> {
 
   private centerY = this.getHeight() / 2;
   private markerWidth = (this.getHeight() - MARGIN_TOP) / 2;
-  private hoveredTs: number | undefined = undefined;
+  private hoveredTs: number|undefined = undefined;
 
   constructor(args: NewTrackArgs) {
     super(args);
@@ -110,8 +110,8 @@ class PerfSamplesProfileTrack extends Track<Config, Data> {
       const selection = globals.state.currentSelection;
       const isHovered = this.hoveredTs === centerX;
       const isSelected = selection !== null &&
-        selection.kind === 'PERF_SAMPLES' &&
-        selection.leftTs <= centerX && selection.rightTs >= centerX;
+          selection.kind === 'PERF_SAMPLES' &&
+          selection.leftTs <= centerX && selection.rightTs >= centerX;
       const strokeWidth = isSelected ? 3 : 0;
       this.drawMarker(
         ctx,
@@ -123,8 +123,8 @@ class PerfSamplesProfileTrack extends Track<Config, Data> {
   }
 
   drawMarker(
-    ctx: CanvasRenderingContext2D, x: number, y: number, isHovered: boolean,
-    strokeWidth: number): void {
+      ctx: CanvasRenderingContext2D, x: number, y: number, isHovered: boolean,
+      strokeWidth: number): void {
     ctx.beginPath();
     ctx.moveTo(x, y - this.markerWidth);
     ctx.lineTo(x - this.markerWidth, y);
@@ -141,7 +141,7 @@ class PerfSamplesProfileTrack extends Track<Config, Data> {
     }
   }
 
-  onMouseMove({ x, y }: { x: number, y: number }) {
+  onMouseMove({x, y}: {x: number, y: number}) {
     const data = this.data();
     if (data === undefined) return;
     const { timeScale } = globals.frontendLocalState;
@@ -155,10 +155,10 @@ class PerfSamplesProfileTrack extends Track<Config, Data> {
     this.hoveredTs = undefined;
   }
 
-  onMouseClick({ x, y }: { x: number, y: number }) {
+  onMouseClick({x, y}: {x: number, y: number}) {
     const data = this.data();
     if (data === undefined) return false;
-    const { timeScale } = globals.frontendLocalState;
+    const {timeScale} = globals.frontendLocalState;
 
     const time = toPs(timeScale.pxToTime(x));
     const [left, right] = searchSegment(data.tsStartsPs, time);
@@ -181,8 +181,8 @@ class PerfSamplesProfileTrack extends Track<Config, Data> {
 
   // If the markers overlap the rightmost one will be selected.
   findTimestampIndex(
-    left: number, timeScale: TimeScale, data: Data, x: number, y: number,
-    right: number): number {
+      left: number, timeScale: TimeScale, data: Data, x: number, y: number,
+      right: number): number {
     let index = -1;
     if (left !== -1) {
       const centerX = timeScale.timeToPx(fromPs(data.tsStartsPs[left]));
@@ -201,7 +201,7 @@ class PerfSamplesProfileTrack extends Track<Config, Data> {
 
   isInMarker(x: number, y: number, centerX: number) {
     return Math.abs(x - centerX) + Math.abs(y - this.centerY) <=
-      this.markerWidth;
+        this.markerWidth;
   }
 }
 

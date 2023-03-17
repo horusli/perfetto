@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { assertTrue } from '../base/logging';
+import {assertTrue} from '../base/logging';
 
 const EPSILON = 0.0000000001;
 
@@ -41,9 +41,9 @@ export function timeToString(sec: number) {
 //  return Math.ceil(seconds * 1e9);
 //}
 
-//export function toNs(seconds: number) {
-//  return Math.round(seconds * 1e9);
-//}
+export function toNs(seconds: number) {
+  return Math.round(seconds * 1e9);
+}
 
 export function fromPs(ps: number) {
   return ps / 1e12;
@@ -115,7 +115,7 @@ export class TimeSpan {
 
   equals(other: TimeSpan): boolean {
     return Math.abs(this.start - other.start) < EPSILON &&
-      Math.abs(this.end - other.end) < EPSILON;
+        Math.abs(this.end - other.end) < EPSILON;
   }
 
   get duration() {

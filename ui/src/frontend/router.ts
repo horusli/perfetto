@@ -155,31 +155,20 @@ export class Router {
     const prefixLength = ROUTE_PREFIX.length;
     let route = '';
     if (hash.startsWith(ROUTE_PREFIX)) {
-      route = hash.substr(prefixLength).split('?')[0];
+      route = hash.substring(prefixLength).split('?')[0];
     }
 
     let page = route;
     let subpage = '';
     const splittingPoint = route.indexOf('/', 1);
     if (splittingPoint > 0) {
-      page = route.substr(0, splittingPoint);
-      subpage = route.substr(splittingPoint);
+      page = route.substring(0, splittingPoint);
+      subpage = route.substring(splittingPoint);
     }
 
     const argsStart = hash.indexOf('?');
-    const argsStr = argsStart < 0 ? '' : hash.substr(argsStart + 1);
-    const args = argsStr ? m.parseQueryString(hash.substr(argsStart)) : {};
-
-    // TODO(primiano): remove this in mid-2022. trace_id is the same concept of
-    // local_cache_key. Just at some point we renamed it to make it more obvious
-    // to people that those URLs cannot be copy-pasted in bugs. For now this
-    // handles cases of reloading pages from old version.
-    if ('trace_id' in args) {
-      if (!('local_cache_key' in args)) {
-        args['local_cache_key'] = args['trace_id'];
-      }
-      delete args['trace_id'];
-    }
+    const argsStr = argsStart < 0 ? '' : hash.substring(argsStart + 1);
+    const args = argsStr ? m.parseQueryString(hash.substring(argsStart)) : {};
 
     return {page, subpage, args};
   }
@@ -187,7 +176,7 @@ export class Router {
   // Like parseFragment() but takes a full URL.
   static parseUrl(url: string): Route {
     const hashPos = url.indexOf('#');
-    const fragment = hashPos < 0 ? '' : url.substr(hashPos);
+    const fragment = hashPos < 0 ? '' : url.substring(hashPos);
     return Router.parseFragment(fragment);
   }
 

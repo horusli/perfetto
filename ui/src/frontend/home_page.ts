@@ -14,10 +14,10 @@
 
 import * as m from 'mithril';
 
-import { channelChanged, getNextChannel, setChannel } from '../common/channels';
+import {channelChanged, getNextChannel, setChannel} from '../common/channels';
 
-import { globals } from './globals';
-import { createPage } from './pages';
+import {globals} from './globals';
+import {createPage} from './pages';
 
 
 export const HomePage = createPage({

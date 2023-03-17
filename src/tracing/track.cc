@@ -173,7 +173,7 @@ void TrackRegistry::InitializeInstance() {
   // framework), events emitted by each will be consistently interleaved on
   // common thread and process tracks.
   if (uint64_t start_time = GetProcessStartTime()) {
-    base::Hash hash;
+    base::Hasher hash;
     hash.Update(start_time);
     hash.Update(Platform::GetCurrentProcessId());
     Track::process_uuid = hash.digest();
@@ -184,8 +184,7 @@ void TrackRegistry::InitializeInstance() {
 }
 
 void TrackRegistry::ResetForTesting() {
-  delete instance_;
-  instance_ = nullptr;
+  instance_->tracks_.clear();
 }
 
 void TrackRegistry::UpdateTrack(Track track,

@@ -55,6 +55,12 @@ void Tracing::InitializeInternal(const TracingInitArgs& args) {
   if (args.log_message_callback) {
     base::SetLogMessageCallback(args.log_message_callback);
   }
+
+  if (args.use_monotonic_raw_clock) {
+    internal::TrackEventInternal::SetClockId(
+        protos::pbzero::BUILTIN_CLOCK_MONOTONIC_RAW);
+  }
+
   internal::TracingMuxerImpl::InitializeInstance(args);
   internal::TrackRegistry::InitializeInstance();
   g_was_initialized = true;
@@ -107,6 +113,12 @@ std::unique_ptr<StartupTracingSession> Tracing::SetupStartupTracingBlocking(
     Tracing::SetupStartupTracingOpts opts) {
   return static_cast<internal::TracingMuxerImpl*>(internal::TracingMuxer::Get())
       ->CreateStartupTracingSessionBlocking(config, std::move(opts));
+}
+
+//  static
+void Tracing::ActivateTriggers(const std::vector<std::string>& triggers,
+                               uint32_t ttl_ms) {
+  internal::TracingMuxer::Get()->ActivateTriggers(triggers, ttl_ms);
 }
 
 TracingSession::~TracingSession() = default;

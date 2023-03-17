@@ -20,22 +20,22 @@ import { fromPs, toPs } from '../common/time';
 import { LIMIT, TrackData } from '../common/track_data';
 import { publishTrackData } from '../frontend/publish';
 
-import { Controller } from './controller';
-import { ControllerFactory } from './controller';
-import { globals } from './globals';
+import {Controller} from './controller';
+import {ControllerFactory} from './controller';
+import {globals} from './globals';
 
-interface TrackConfig { }
+interface TrackConfig {}
 
-type TrackConfigWithNamespace = TrackConfig & { namespace: string };
+type TrackConfigWithNamespace = TrackConfig&{namespace: string};
 
 // Allow to override via devtools for testing (note, needs to be done in the
 // controller-thread).
-(self as {} as { quantPx: number }).quantPx = 1;
+(self as {} as {quantPx: number}).quantPx = 1;
 
 // TrackController is a base class overridden by track implementations (e.g.,
 // sched slices, nestable slices, counters).
 export abstract class TrackController<
-  Config, Data extends TrackData = TrackData> extends Controller<'main'> {
+    Config, Data extends TrackData = TrackData> extends Controller<'main'> {
   readonly trackId: string;
   readonly engine: Engine;
   private data?: TrackData;
@@ -55,22 +55,22 @@ export abstract class TrackController<
   }
 
   protected pxSize(): number {
-    return (self as {} as { quantPx: number }).quantPx;
+    return (self as {} as {quantPx: number}).quantPx;
   }
 
   // Can be overriden by the track implementation to allow one time setup work
   // to be performed before the first onBoundsChange invcation.
-  async onSetup() { }
+  async onSetup() {}
 
   // Can be overriden by the track implementation to allow some one-off work
   // when requested reload (e.g. recalculating height).
-  async onReload() { }
+  async onReload() {}
 
   // Must be overridden by the track implementation. Is invoked when the track
   // frontend runs out of cached data. The derived track controller is expected
   // to publish new track data in response to this call.
   abstract onBoundsChange(start: number, end: number, resolution: number):
-    Promise<Data>;
+      Promise<Data>;
 
   get trackState(): TrackState {
     return assertExists(globals.state.tracks[this.trackId]);
@@ -94,7 +94,7 @@ export abstract class TrackController<
 
   publish(data: Data): void {
     this.data = data;
-    publishTrackData({ id: this.trackId, data });
+    publishTrackData({id: this.trackId, data});
   }
 
   // Returns a valid SQL table name with the given prefix that should be unique
@@ -118,9 +118,9 @@ export abstract class TrackController<
   }
 
   private shouldReload(): boolean {
-    const { lastTrackReloadRequest } = globals.state;
+    const {lastTrackReloadRequest} = globals.state;
     return !!lastTrackReloadRequest &&
-      this.lastReloadHandled < lastTrackReloadRequest;
+        this.lastReloadHandled < lastTrackReloadRequest;
   }
 
   private markReloadHandled() {
@@ -137,17 +137,17 @@ export abstract class TrackController<
       // We request more data than the window, so add window duration to find
       // the previous window.
       const prevWindowStart =
-        this.data.start + (traceTime.startSec - traceTime.endSec);
+          this.data.start + (traceTime.startSec - traceTime.endSec);
       return traceTime.startSec !== prevWindowStart;
     }
 
     // Otherwise request more data only when out of range of current data or
     // resolution has changed.
     const inRange = traceTime.startSec >= this.data.start &&
-      traceTime.endSec <= this.data.end;
+        traceTime.endSec <= this.data.end;
     return !inRange ||
-      this.data.resolution !==
-      globals.state.frontendLocalState.visibleState.resolution;
+        this.data.resolution !==
+        globals.state.frontendLocalState.visibleState.resolution;
   }
 
   // Decides, based on the length of the trace and the number of rows
@@ -232,12 +232,12 @@ export abstract class TrackController<
   run() {
     const visibleState = globals.state.frontendLocalState.visibleState;
     if (visibleState === undefined || visibleState.resolution === undefined ||
-      visibleState.resolution === Infinity) {
+        visibleState.resolution === Infinity) {
       return;
     }
     const dur = visibleState.endSec - visibleState.startSec;
     if (globals.state.visibleTracks.includes(this.trackId) &&
-      this.shouldRequestData(visibleState)) {
+        this.shouldRequestData(visibleState)) {
       if (this.requestingData) {
         this.queuedRequest = true;
       } else {
@@ -285,9 +285,9 @@ export interface TrackControllerArgs {
 }
 
 export interface TrackControllerFactory extends
-  ControllerFactory<TrackControllerArgs> {
+    ControllerFactory<TrackControllerArgs> {
   kind: string;
 }
 
 export const trackControllerRegistry =
-  Registry.kindRegistry<TrackControllerFactory>();
+    Registry.kindRegistry<TrackControllerFactory>();

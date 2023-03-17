@@ -162,6 +162,14 @@ struct DataSourceStaticState {
     static_assert(sizeof(valid_instances.load()) * 8 >= kMaxDataSourceInstances,
                   "kMaxDataSourceInstances too high");
   }
+
+  void ResetForTesting() {
+    id = 0;
+    index = kMaxDataSources;
+    valid_instances.store(0, std::memory_order_release);
+    instances = {};
+    incremental_state_generation.store(0, std::memory_order_release);
+  }
 };
 
 // Per-DataSource-instance thread-local state.
@@ -179,7 +187,7 @@ struct DataSourceInstanceThreadLocalState {
   BufferId buffer_id = 0;
   uint64_t data_source_instance_id = 0;
   bool is_intercepted = false;
-  bool last_packet_was_empty = false;
+  uint64_t last_empty_packet_position = 0;
   uint16_t startup_target_buffer_reservation = 0;
 };
 

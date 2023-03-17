@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { TrackData } from '../../common/track_data';
+import {TrackData} from '../../common/track_data';
 
 export const EXPECTED_FRAMES_SLICE_TRACK_KIND = 'ExpectedFramesSliceTrack';
 
-import { NewTrackArgs, Track } from '../../frontend/track';
-import { ChromeSliceTrack } from '../chrome_slices';
+import {NewTrackArgs, Track} from '../../frontend/track';
+import {ChromeSliceTrack} from '../chrome_slices';
 
 import { NUM, NUM_NULL, STR } from '../../common/query_result';
 import { fromPs, toPs } from '../../common/time';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import { PluginContext } from '../../common/plugin_api';
+import {PluginContext} from '../../common/plugin_api';
 
 export interface Config {
   maxDepth: number;

@@ -302,7 +302,10 @@ message AndroidDisplayMetrics {
   // Stats to measure the runtime of updating the power state in
   // DisplayPowerController
   message UpdatePowerState {
-    optional uint32 avg_runtime_ms = 1;
+    optional uint32 avg_runtime_micro_secs = 2;
+
+    // Removed: avg_runtime_ms
+    reserved 1;
   }
 
   optional UpdatePowerState update_power_state = 6;
@@ -1339,6 +1342,8 @@ message AndroidStartupMetric {
     optional int64 runnable_dur_ns = 2;
     optional int64 uninterruptible_sleep_dur_ns = 3;
     optional int64 interruptible_sleep_dur_ns = 4;
+    optional int64 uninterruptible_io_sleep_dur_ns = 5;
+    optional int64 uninterruptible_non_io_sleep_dur_ns = 6;
   }
 
   message McyclesByCoreType {
@@ -1488,10 +1493,12 @@ message AndroidStartupMetric {
   // Useful to put the startup in context.
   message SystemState {
     // Whether the dex2oat64 process was running concurrent to the startup.
-    optional bool dex2oat_running = 1;
+    // Deprecated as of 10/2022.
+    optional bool dex2oat_running = 1 [deprecated=true];
 
     // Whether the installd process was running concurrent to the startup.
-    optional bool installd_running = 2;
+    // Deprecated as of 10/2022.
+    optional bool installd_running = 2 [deprecated=true];
 
     // The number of broadcasts dispatched by the system during the app
     // launch.
@@ -1508,9 +1515,14 @@ message AndroidStartupMetric {
     // Note: the exact number of returned is an implementation detail and
     // will likely change over time.
     repeated string most_active_non_launch_processes = 5;
+
+    // Duration the installd process was running concurrent to the startup.
+    optional int64 installd_dur_ns = 6;
+    // Duration the dex2oat64 process was running concurrent to the startup.
+    optional int64 dex2oat_dur_ns = 7;
   }
 
-  // Next id: 18
+  // Next id: 19
   message Startup {
     // Random id uniquely identifying an app startup in this trace.
     optional uint32 startup_id = 1;
@@ -1562,6 +1574,9 @@ message AndroidStartupMetric {
 
     // Contains information about the status of odex files.
     repeated OptimizationStatus optimization_status = 12;
+
+    // Package name of startups running concurrent to the launch.
+    repeated string startup_concurrent_to_launch = 18;
 
     // Contains information about the state of the rest of the system during the
     // startup. This is useful for getting context about why a startup might
@@ -1621,36 +1636,6 @@ message AndroidSurfaceflingerMetric {
 }
 
 // End of protos/perfetto/metrics/android/surfaceflinger.proto
-
-// Begin of protos/perfetto/metrics/android/sysui_cuj_metrics.proto
-
-// Metric that stores frame information and potential jank root causes
-// for a single Android system UI interaction/user journey.
-message AndroidSysUiCujMetrics {
-  // A list of all frames within the SysUi user journey.
-  repeated Frame frames = 1;
-
-  optional string cuj_name = 2;
-  optional int64 cuj_start = 3;
-  optional int64 cuj_dur = 4;
-
-  // Details about the process (uid, version, etc)
-  optional AndroidProcessMetadata process = 5;
-
-  message Frame {
-    // Index of the frame within the single user journey.
-    optional int64 number = 1;
-    optional int64 vsync = 5;
-    optional int64 ts = 2;
-    optional int64 dur = 3;
-
-    // A list of identified potential causes for jank.
-    // Optional.
-    repeated string jank_cause = 4;
-  }
-}
-
-// End of protos/perfetto/metrics/android/sysui_cuj_metrics.proto
 
 // Begin of protos/perfetto/metrics/android/task_names.proto
 
@@ -1829,8 +1814,8 @@ message TraceMetrics {
   // GPU metrics on Android.
   optional AndroidGpuMetric android_gpu = 26;
 
-  // Frame timing and jank root causes for system UI interactions.
-  optional AndroidSysUiCujMetrics android_sysui_cuj = 27;
+  // Deprecated AndroidSysUiCujMetrics.
+  reserved 27;
 
   // Interaction and frame timings for CUJs (important UI transitions).
   optional AndroidJankCujMetric android_jank_cuj = 48;

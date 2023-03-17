@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { TimeSpan } from '../common/time';
+import {TimeSpan} from '../common/time';
 
-import { computeZoom, TimeScale } from './time_scale';
+import {computeZoom, TimeScale} from './time_scale';
 
 test('time scale to work', () => {
   const scale = new TimeScale(new TimeSpan(0, 100), [200, 1000]);

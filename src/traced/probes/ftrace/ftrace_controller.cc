@@ -127,6 +127,7 @@ bool HardResetFtraceState() {
     // Not checking success because these files might not be accessible on
     // older or release builds of Android:
     WriteToFile((prefix + "events/enable").c_str(), "0");
+    WriteToFile((prefix + "events/raw_syscalls/filter").c_str(), "0");
     WriteToFile((prefix + "current_tracer").c_str(), "nop");
     res &= ClearFile((prefix + "trace").c_str());
     if (res)
@@ -138,9 +139,10 @@ bool HardResetFtraceState() {
 // static
 std::unique_ptr<FtraceController> FtraceController::Create(
     base::TaskRunner* runner,
-    Observer* observer) {
+    Observer* observer,
+    bool preserve_ftrace_buffer) {
   std::unique_ptr<FtraceProcfs> ftrace_procfs =
-      FtraceProcfs::CreateGuessingMountPoint();
+      FtraceProcfs::CreateGuessingMountPoint("", preserve_ftrace_buffer);
 
   if (!ftrace_procfs)
     return nullptr;
@@ -154,8 +156,10 @@ std::unique_ptr<FtraceController> FtraceController::Create(
   std::map<std::string, std::vector<GroupAndName>> vendor_evts;
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID)
   if (base::FileExists(vendor_tracepoints::kCategoriesFile)) {
-    base::Status status = vendor_tracepoints::DiscoverVendorTracepointsWithFile(
-        vendor_tracepoints::kCategoriesFile, &vendor_evts);
+    base::Status status =
+        vendor_tracepoints::DiscoverAccessibleVendorTracepointsWithFile(
+            vendor_tracepoints::kCategoriesFile, &vendor_evts,
+            ftrace_procfs.get());
     if (!status.ok()) {
       PERFETTO_ELOG("Cannot load vendor categories: %s", status.c_message());
     }
@@ -171,16 +175,17 @@ std::unique_ptr<FtraceController> FtraceController::Create(
   std::unique_ptr<FtraceConfigMuxer> model =
       std::unique_ptr<FtraceConfigMuxer>(new FtraceConfigMuxer(
           ftrace_procfs.get(), table.get(), std::move(syscalls), vendor_evts));
-  return std::unique_ptr<FtraceController>(
-      new FtraceController(std::move(ftrace_procfs), std::move(table),
-                           std::move(model), runner, observer));
+  return std::unique_ptr<FtraceController>(new FtraceController(
+      std::move(ftrace_procfs), std::move(table), std::move(model), runner,
+      observer, preserve_ftrace_buffer));
 }
 
 FtraceController::FtraceController(std::unique_ptr<FtraceProcfs> ftrace_procfs,
                                    std::unique_ptr<ProtoTranslationTable> table,
                                    std::unique_ptr<FtraceConfigMuxer> model,
                                    base::TaskRunner* task_runner,
-                                   Observer* observer)
+                                   Observer* observer,
+                                   bool preserve_ftrace_buffer)
     : task_runner_(task_runner),
       observer_(observer),
       symbolizer_(new LazyKernelSymbolizer()),
@@ -188,6 +193,7 @@ FtraceController::FtraceController(std::unique_ptr<FtraceProcfs> ftrace_procfs,
       table_(std::move(table)),
       ftrace_config_muxer_(std::move(model)),
       ftrace_clock_snapshot_(new FtraceClockSnapshot()),
+      preserve_ftrace_buffer_(preserve_ftrace_buffer),
       weak_factory_(this) {}
 
 FtraceController::~FtraceController() {
@@ -359,8 +365,8 @@ void FtraceController::ClearTrace() {
   ftrace_procfs_->ClearTrace();
 }
 
-void FtraceController::DisableAllEvents() {
-  ftrace_procfs_->DisableAllEvents();
+bool FtraceController::IsTracingAvailable() {
+  return ftrace_procfs_->IsTracingAvailable();
 }
 
 void FtraceController::Flush(FlushRequestID flush_id) {

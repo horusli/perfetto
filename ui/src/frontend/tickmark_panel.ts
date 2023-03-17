@@ -13,12 +13,16 @@
 // limitations under the License.
 
 import * as m from 'mithril';
-import { fromPs } from '../common/time';
+import {fromPs} from '../common/time';
 
-import { TRACK_SHELL_WIDTH } from './css_constants';
-import { globals } from './globals';
-import { gridlines } from './gridline_helper';
-import { Panel, PanelSize } from './panel';
+import {TRACK_SHELL_WIDTH} from './css_constants';
+import {globals} from './globals';
+import {
+  TickGenerator,
+  TickType,
+  timeScaleForVisibleWindow,
+} from './gridline_helper';
+import {Panel, PanelSize} from './panel';
 
 // This is used to display the summary of search results.
 export class TickmarkPanel extends Panel {
@@ -27,13 +31,15 @@ export class TickmarkPanel extends Panel {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
-    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
+    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
 
     ctx.fillStyle = '#999';
     ctx.fillRect(TRACK_SHELL_WIDTH - 2, 0, 2, size.height);
-    for (const xAndTime of gridlines(
-      size.width, visibleWindowTime, timeScale)) {
-      ctx.fillRect(xAndTime[0], 0, 1, size.height);
+    const relScale = timeScaleForVisibleWindow(TRACK_SHELL_WIDTH, size.width);
+    if (relScale.timeSpan.duration > 0 && relScale.widthPx > 0) {
+      for (const {type, position} of new TickGenerator(relScale)) {
+        if (type === TickType.MAJOR) ctx.fillRect(position, 0, 1, size.height);
+      }
     }
 
     const data = globals.searchSummary;
@@ -44,19 +50,19 @@ export class TickmarkPanel extends Panel {
         continue;
       }
       const rectStart =
-        Math.max(timeScale.timeToPx(tStart), 0) + TRACK_SHELL_WIDTH;
+          Math.max(timeScale.timeToPx(tStart), 0) + TRACK_SHELL_WIDTH;
       const rectEnd = timeScale.timeToPx(tEnd) + TRACK_SHELL_WIDTH;
       ctx.fillStyle = '#ffe263';
       ctx.fillRect(
-        Math.floor(rectStart),
-        0,
-        Math.ceil(rectEnd - rectStart),
-        size.height);
+          Math.floor(rectStart),
+          0,
+          Math.ceil(rectEnd - rectStart),
+          size.height);
     }
     const index = globals.state.searchIndex;
     const startSec = fromPs(globals.currentSearchResults.tsStarts[index]);
     const triangleStart =
-      Math.max(timeScale.timeToPx(startSec), 0) + TRACK_SHELL_WIDTH;
+        Math.max(timeScale.timeToPx(startSec), 0) + TRACK_SHELL_WIDTH;
     ctx.fillStyle = '#000';
     ctx.beginPath();
     ctx.moveTo(triangleStart, size.height);

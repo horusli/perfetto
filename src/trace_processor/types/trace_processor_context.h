@@ -44,6 +44,7 @@ class AsyncTrackSetTracker;
 class AndroidProbesTracker;
 class ChunkedTraceReader;
 class ClockTracker;
+class DeobfuscationMappingTable;
 class EventTracker;
 class ForwardingTraceParser;
 class FtraceModule;
@@ -53,6 +54,7 @@ class HeapGraphTracker;
 class HeapProfileTracker;
 class PerfSampleTracker;
 class MetadataTracker;
+class PacketAnalyzer;
 class ProtoImporterModule;
 class TrackEventModule;
 class ProcessTracker;
@@ -116,19 +118,21 @@ class TraceProcessorContext {
   std::unique_ptr<Destructible> systrace_parser;         // SystraceParser
   std::unique_ptr<Destructible> thread_state_tracker;    // ThreadStateTracker
   std::unique_ptr<Destructible> i2c_tracker;             // I2CTracker
+  std::unique_ptr<Destructible> content_analyzer;
 
   // These fields are trace readers which will be called by |forwarding_parser|
   // once the format of the trace is discovered. They are placed here as they
-  // are only available in the storage_full target.
+  // are only available in the lib target.
   std::unique_ptr<ChunkedTraceReader> json_trace_tokenizer;
   std::unique_ptr<ChunkedTraceReader> fuchsia_trace_tokenizer;
+  std::unique_ptr<ChunkedTraceReader> ninja_log_parser;
   std::unique_ptr<ChunkedTraceReader> android_bugreport_parser;
   std::unique_ptr<ChunkedTraceReader> systrace_trace_parser;
   std::unique_ptr<ChunkedTraceReader> gzip_trace_parser;
 
   // These fields are trace parsers which will be called by |forwarding_parser|
   // once the format of the trace is discovered. They are placed here as they
-  // are only available in the storage_full target.
+  // are only available in the lib target.
   std::unique_ptr<TraceParser> json_trace_parser;
   std::unique_ptr<TraceParser> fuchsia_trace_parser;
 

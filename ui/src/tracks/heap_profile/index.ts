@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ProfileType } from 'src/common/state';
+import {ProfileType} from 'src/common/state';
 
 import { searchSegment } from '../../base/binary_search';
 import { Actions } from '../../common/actions';
@@ -24,10 +24,10 @@ import { profileType } from '../../controller/flamegraph_controller';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import { FLAMEGRAPH_HOVERED_COLOR } from '../../frontend/flamegraph';
-import { globals } from '../../frontend/globals';
-import { TimeScale } from '../../frontend/time_scale';
-import { NewTrackArgs, Track } from '../../frontend/track';
+import {FLAMEGRAPH_HOVERED_COLOR} from '../../frontend/flamegraph';
+import {globals} from '../../frontend/globals';
+import {TimeScale} from '../../frontend/time_scale';
+import {NewTrackArgs, Track} from '../../frontend/track';
 
 export const HEAP_PROFILE_TRACK_KIND = 'HeapProfileTrack';
 
@@ -43,7 +43,7 @@ export interface Config {
 class HeapProfileTrackController extends TrackController<Config, Data> {
   static readonly kind = HEAP_PROFILE_TRACK_KIND;
   async onBoundsChange(start: number, end: number, resolution: number):
-    Promise<Data> {
+      Promise<Data> {
     if (this.config.upid === undefined) {
       return {
         start,
@@ -77,7 +77,7 @@ class HeapProfileTrackController extends TrackController<Config, Data> {
       types: new Array<ProfileType>(numRows),
     };
 
-    const it = queryRes.iter({ ts: NUM, type: STR });
+    const it = queryRes.iter({ts: NUM, type: STR});
     for (let row = 0; it.valid(); it.next(), row++) {
       data.tsStarts[row] = it.ts;
       data.types[row] = profileType(it.type);
@@ -99,7 +99,7 @@ class HeapProfileTrack extends Track<Config, Data> {
 
   private centerY = this.getHeight() / 2;
   private markerWidth = (this.getHeight() - MARGIN_TOP) / 2;
-  private hoveredTs: number | undefined = undefined;
+  private hoveredTs: number|undefined = undefined;
 
   constructor(args: NewTrackArgs) {
     super(args);
@@ -122,7 +122,7 @@ class HeapProfileTrack extends Track<Config, Data> {
       const selection = globals.state.currentSelection;
       const isHovered = this.hoveredTs === centerX;
       const isSelected = selection !== null &&
-        selection.kind === 'HEAP_PROFILE' && selection.ts === centerX;
+          selection.kind === 'HEAP_PROFILE' && selection.ts === centerX;
       const strokeWidth = isSelected ? 3 : 0;
       this.drawMarker(
         ctx,
@@ -134,8 +134,8 @@ class HeapProfileTrack extends Track<Config, Data> {
   }
 
   drawMarker(
-    ctx: CanvasRenderingContext2D, x: number, y: number, isHovered: boolean,
-    strokeWidth: number): void {
+      ctx: CanvasRenderingContext2D, x: number, y: number, isHovered: boolean,
+      strokeWidth: number): void {
     ctx.beginPath();
     ctx.moveTo(x, y - this.markerWidth);
     ctx.lineTo(x - this.markerWidth, y);
@@ -152,7 +152,7 @@ class HeapProfileTrack extends Track<Config, Data> {
     }
   }
 
-  onMouseMove({ x, y }: { x: number, y: number }) {
+  onMouseMove({x, y}: {x: number, y: number}) {
     const data = this.data();
     if (data === undefined) return;
     const { timeScale } = globals.frontendLocalState;
@@ -166,10 +166,10 @@ class HeapProfileTrack extends Track<Config, Data> {
     this.hoveredTs = undefined;
   }
 
-  onMouseClick({ x, y }: { x: number, y: number }) {
+  onMouseClick({x, y}: {x: number, y: number}) {
     const data = this.data();
     if (data === undefined) return false;
-    const { timeScale } = globals.frontendLocalState;
+    const {timeScale} = globals.frontendLocalState;
 
     const time = toPs(timeScale.pxToTime(x));
     const [left, right] = searchSegment(data.tsStarts, time);
@@ -180,7 +180,7 @@ class HeapProfileTrack extends Track<Config, Data> {
       const ts = data.tsStarts[index];
       const type = data.types[index];
       globals.makeSelection(Actions.selectHeapProfile(
-        { id: index, upid: this.config.upid, ts, type }));
+          {id: index, upid: this.config.upid, ts, type}));
       return true;
     }
     return false;
@@ -188,8 +188,8 @@ class HeapProfileTrack extends Track<Config, Data> {
 
   // If the markers overlap the rightmost one will be selected.
   findTimestampIndex(
-    left: number, timeScale: TimeScale, data: Data, x: number, y: number,
-    right: number): number {
+      left: number, timeScale: TimeScale, data: Data, x: number, y: number,
+      right: number): number {
     let index = -1;
     if (left !== -1) {
       const centerX = timeScale.timeToPx(fromPs(data.tsStarts[left]));
@@ -208,7 +208,7 @@ class HeapProfileTrack extends Track<Config, Data> {
 
   isInMarker(x: number, y: number, centerX: number) {
     return Math.abs(x - centerX) + Math.abs(y - this.centerY) <=
-      this.markerWidth;
+        this.markerWidth;
   }
 }
 

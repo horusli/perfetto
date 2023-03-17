@@ -263,6 +263,17 @@ class PERFETTO_EXPORT_COMPONENT LegacyTraceId {
       : raw_id_(static_cast<uint64_t>(raw_id)) {}
   explicit LegacyTraceId(int8_t raw_id)
       : raw_id_(static_cast<uint64_t>(raw_id)) {}
+// Different platforms disagree on which integer types are same and which
+// are different. E.g. on Mac size_t is considered a different type from
+// uint64_t even though it has the same size and signedness.
+// Below we add overloads for those types that are known to cause ambiguity.
+#if PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
+  explicit LegacyTraceId(size_t raw_id) : raw_id_(raw_id) {}
+  explicit LegacyTraceId(intptr_t raw_id)
+      : raw_id_(static_cast<uint64_t>(raw_id)) {}
+#elif PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+  explicit LegacyTraceId(unsigned long raw_id) : raw_id_(raw_id) {}
+#endif
   explicit LegacyTraceId(LocalId raw_id) : raw_id_(raw_id.raw_id()) {
     id_flags_ = legacy::kTraceEventFlagHasLocalId;
   }
@@ -1202,7 +1213,7 @@ inline ::perfetto::StaticString GetEventNameTypeForLegacyEvents(
       TRACE_EVENT_PHASE_NESTABLE_ASYNC_END, category_group,                   \
       ::perfetto::DynamicString{name}, id, TRACE_EVENT_API_CURRENT_THREAD_ID, \
       timestamp, TRACE_EVENT_FLAG_NONE)
-#define TRACE_EVENT_NESTABLE_ASYNC_END_WITH_TIMESTAMP2(                    \
+#define TRACE_EVENT_COPY_NESTABLE_ASYNC_END_WITH_TIMESTAMP2(               \
     category_group, name, id, timestamp, arg1_name, arg1_val, arg2_name,   \
     arg2_val)                                                              \
   INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMP(                      \
@@ -1266,7 +1277,7 @@ inline ::perfetto::StaticString GetEventNameTypeForLegacyEvents(
     static int PERFETTO_UID(prev) = -1;                              \
     int PERFETTO_UID(curr) =                                         \
         ::perfetto::internal::TrackEventInternal::GetSessionCount(); \
-    if (::PERFETTO_TRACK_EVENT_NAMESPACE::TrackEvent::IsEnabled() && \
+    if (PERFETTO_TRACK_EVENT_NAMESPACE::TrackEvent::IsEnabled() &&   \
         (PERFETTO_UID(prev) != PERFETTO_UID(curr))) {                \
       *(ret) = true;                                                 \
       PERFETTO_UID(prev) = PERFETTO_UID(curr);                       \
@@ -1301,29 +1312,29 @@ inline ::perfetto::StaticString GetEventNameTypeForLegacyEvents(
 // non-zero indicates at least one tracing session for this category is active.
 // Note that callers should not make any assumptions at what each bit represents
 // in the status byte. Does not support dynamic categories.
-#define TRACE_EVENT_API_GET_CATEGORY_GROUP_ENABLED(category)                \
-  reinterpret_cast<const uint8_t*>(                                         \
-      [&] {                                                                 \
-        static_assert(                                                      \
-            !std::is_same<::perfetto::DynamicCategory,                      \
-                          decltype(category)>::value,                       \
-            "Enabled flag pointers are not supported for dynamic trace "    \
-            "categories.");                                                 \
-      },                                                                    \
-      PERFETTO_TRACK_EVENT_NAMESPACE::internal::kCategoryRegistry           \
-          .GetCategoryState(                                                \
-              ::PERFETTO_TRACK_EVENT_NAMESPACE::internal::kCategoryRegistry \
+#define TRACE_EVENT_API_GET_CATEGORY_GROUP_ENABLED(category)              \
+  reinterpret_cast<const uint8_t*>(                                       \
+      [&] {                                                               \
+        static_assert(                                                    \
+            !std::is_same<::perfetto::DynamicCategory,                    \
+                          decltype(category)>::value,                     \
+            "Enabled flag pointers are not supported for dynamic trace "  \
+            "categories.");                                               \
+      },                                                                  \
+      PERFETTO_TRACK_EVENT_NAMESPACE::internal::kCategoryRegistry         \
+          .GetCategoryState(                                              \
+              PERFETTO_TRACK_EVENT_NAMESPACE::internal::kCategoryRegistry \
                   .Find(category, /*is_dynamic=*/false)))
 
 // Given a pointer returned by TRACE_EVENT_API_GET_CATEGORY_GROUP_ENABLED,
 // yields a pointer to the name of the corresponding category group.
-#define TRACE_EVENT_API_GET_CATEGORY_GROUP_NAME(category_enabled_ptr)       \
-  ::PERFETTO_TRACK_EVENT_NAMESPACE::internal::kCategoryRegistry             \
-      .GetCategory(                                                         \
-          category_enabled_ptr -                                            \
-          reinterpret_cast<const uint8_t*>(                                 \
-              ::PERFETTO_TRACK_EVENT_NAMESPACE::internal::kCategoryRegistry \
-                  .GetCategoryState(0u)))                                   \
+#define TRACE_EVENT_API_GET_CATEGORY_GROUP_NAME(category_enabled_ptr)     \
+  PERFETTO_TRACK_EVENT_NAMESPACE::internal::kCategoryRegistry             \
+      .GetCategory(                                                       \
+          category_enabled_ptr -                                          \
+          reinterpret_cast<const uint8_t*>(                               \
+              PERFETTO_TRACK_EVENT_NAMESPACE::internal::kCategoryRegistry \
+                  .GetCategoryState(0u)))                                 \
       ->name
 
 #endif  // PERFETTO_ENABLE_LEGACY_TRACE_EVENTS

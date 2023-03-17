@@ -93,19 +93,6 @@ describe('android_trace_30s', () => {
     });
     await waitForPerfettoIdle(page);
   });
-
-  // TODO(198431341): Test is flaky. We should de-flake and re-enable.
-  // test('search', async () => {
-  //  const page = await getPage();
-  //  const searchInput = '.omnibox input';
-  //  await page.focus(searchInput);
-  //  await page.keyboard.type('TrimMaps');
-  //  await waitForPerfettoIdle(page);
-  //  for (let i = 0; i < 10; i++) {
-  //    await page.keyboard.type('\n');
-  //  }
-  //  await waitForPerfettoIdle(page);
-  // });
 });
 
 describe('chrome_rendering_desktop', () => {
@@ -144,6 +131,26 @@ describe('chrome_rendering_desktop', () => {
     await waitForPerfettoIdle(page);
     await page.focus('canvas');
     await page.keyboard.type('f');  // Zoom to selection
+    await waitForPerfettoIdle(page);
+  });
+});
+
+// Tests that chrome traces with missing process/thread names still open
+// correctly in the UI.
+describe('chrome_missing_track_names', () => {
+  let page: puppeteer.Page;
+
+  beforeAll(async () => {
+    page = await getPage();
+    await page.goto('http://localhost:10000/?testing=1');
+    await waitForPerfettoIdle(page);
+  });
+
+  test('load', async () => {
+    const page = await getPage();
+    const file = await page.waitForSelector('input.trace_file');
+    const tracePath = getTestTracePath('chrome_missing_track_names.pb.gz');
+    assertExists(file).uploadFile(tracePath);
     await waitForPerfettoIdle(page);
   });
 });

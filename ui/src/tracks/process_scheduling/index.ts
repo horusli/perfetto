@@ -23,9 +23,9 @@ import { TrackData } from '../../common/track_data';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import { checkerboardExcept } from '../../frontend/checkerboard';
-import { globals } from '../../frontend/globals';
-import { NewTrackArgs, Track } from '../../frontend/track';
+import {checkerboardExcept} from '../../frontend/checkerboard';
+import {globals} from '../../frontend/globals';
+import {NewTrackArgs, Track} from '../../frontend/track';
 
 export const PROCESS_SCHEDULING_TRACK_KIND = 'ProcessSchedulingTrack';
 
@@ -42,7 +42,7 @@ export interface Data extends TrackData {
 
 export interface Config {
   pidForColor: number;
-  upid: null | number;
+  upid: null|number;
   utid: number;
 }
 
@@ -67,7 +67,7 @@ class ProcessSchedulingTrackController extends TrackController<Config, Data> {
     const result = (await this.query(`
       select ifnull(max(dur), 0) as maxDur, count(1) as count
       from ${this.tableName('process_sched')}
-    `)).iter({ maxDur: NUM, count: NUM });
+    `)).iter({maxDur: NUM, count: NUM});
     assertTrue(result.valid());
     this.maxDurPs = result.maxDur;
 
@@ -92,7 +92,7 @@ class ProcessSchedulingTrackController extends TrackController<Config, Data> {
   }
 
   async onBoundsChange(start: number, end: number, resolution: number):
-    Promise<Data> {
+      Promise<Data> {
     assertTrue(this.config.upid !== null);
 
     // The resolution should always be a power of two for the logic of this
@@ -155,7 +155,7 @@ class ProcessSchedulingTrackController extends TrackController<Config, Data> {
     const tsq = isCached ? `cached_tsq / ${bucketPs} * ${bucketPs}` :
       `(ts + ${bucketPs / 2}) / ${bucketPs} * ${bucketPs}`;
     const queryTable = isCached ? this.tableName('process_sched_cached') :
-      this.tableName('process_sched');
+                                  this.tableName('process_sched');
     const constraintColumn = isCached ? 'cached_tsq' : 'ts';
     return this.query(`
       select
@@ -195,7 +195,7 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
     return new ProcessSchedulingTrack(args);
   }
 
-  private mousePos?: { x: number, y: number };
+  private mousePos?: {x: number, y: number};
   private utidHoveredInThisTrack = -1;
 
   constructor(args: NewTrackArgs) {
@@ -208,7 +208,7 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
     // TODO: fonts and colors should come from the CSS and not hardcoded here.
-    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
+    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
     const data = this.data();
 
     if (data === undefined) return;  // Can't possibly draw anything.
@@ -216,18 +216,18 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
     // If the cached trace slices don't fully cover the visible time range,
     // show a gray rectangle with a "Loading..." label.
     checkerboardExcept(
-      ctx,
-      this.getHeight(),
-      timeScale.timeToPx(visibleWindowTime.start),
-      timeScale.timeToPx(visibleWindowTime.end),
-      timeScale.timeToPx(data.start),
-      timeScale.timeToPx(data.end));
+        ctx,
+        this.getHeight(),
+        timeScale.timeToPx(visibleWindowTime.start),
+        timeScale.timeToPx(visibleWindowTime.end),
+        timeScale.timeToPx(data.start),
+        timeScale.timeToPx(data.end));
 
     assertTrue(data.starts.length === data.ends.length);
     assertTrue(data.starts.length === data.utids.length);
 
     const rawStartIdx =
-      data.ends.findIndex((end) => end >= visibleWindowTime.start);
+        data.ends.findIndex((end) => end >= visibleWindowTime.start);
     const startIdx = rawStartIdx === -1 ? data.starts.length : rawStartIdx;
 
     const [, rawEndIdx] = searchSegment(data.starts, visibleWindowTime.end);
@@ -284,25 +284,25 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
     }
   }
 
-  onMouseMove(pos: { x: number, y: number }) {
+  onMouseMove(pos: {x: number, y: number}) {
     const data = this.data();
     this.mousePos = pos;
     if (data === undefined) return;
     if (pos.y < MARGIN_TOP || pos.y > MARGIN_TOP + RECT_HEIGHT) {
       this.utidHoveredInThisTrack = -1;
-      globals.dispatch(Actions.setHoveredUtidAndPid({ utid: -1, pid: -1 }));
+      globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
       return;
     }
 
     const cpuTrackHeight = Math.floor(RECT_HEIGHT / data.maxCpu);
     const cpu = Math.floor((pos.y - MARGIN_TOP) / (cpuTrackHeight + 1));
-    const { timeScale } = globals.frontendLocalState;
+    const {timeScale} = globals.frontendLocalState;
     const t = timeScale.pxToTime(pos.x);
 
     const [i, j] = searchRange(data.starts, t, searchEq(data.cpus, cpu));
     if (i === j || i >= data.starts.length || t > data.ends[i]) {
       this.utidHoveredInThisTrack = -1;
-      globals.dispatch(Actions.setHoveredUtidAndPid({ utid: -1, pid: -1 }));
+      globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
       return;
     }
 
@@ -310,12 +310,12 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
     this.utidHoveredInThisTrack = utid;
     const threadInfo = globals.threads.get(utid);
     const pid = threadInfo ? (threadInfo.pid ? threadInfo.pid : -1) : -1;
-    globals.dispatch(Actions.setHoveredUtidAndPid({ utid, pid }));
+    globals.dispatch(Actions.setHoveredUtidAndPid({utid, pid}));
   }
 
   onMouseOut() {
     this.utidHoveredInThisTrack = -1;
-    globals.dispatch(Actions.setHoveredUtidAndPid({ utid: -1, pid: -1 }));
+    globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
     this.mousePos = undefined;
   }
 }

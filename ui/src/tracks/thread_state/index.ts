@@ -115,15 +115,15 @@ class ThreadStateTrackController extends TrackController<Config, Data> {
     };
 
     const stringIndexes = new Map<
-      { shortState: string | undefined; ioWait: boolean | undefined },
-      number>();
+        {shortState: string | undefined; ioWait: boolean | undefined},
+        number>();
     function internState(
-      shortState: string | undefined, ioWait: boolean | undefined) {
-      let idx = stringIndexes.get({ shortState, ioWait });
+        shortState: string|undefined, ioWait: boolean|undefined) {
+      let idx = stringIndexes.get({shortState, ioWait});
       if (idx !== undefined) return idx;
       idx = data.strings.length;
       data.strings.push(translateState(shortState, ioWait));
-      stringIndexes.set({ shortState, ioWait }, idx);
+      stringIndexes.set({shortState, ioWait}, idx);
       return idx;
     }
     const it = queryRes.iter({
@@ -186,7 +186,7 @@ class ThreadStateTrack extends Track<Config, Data> {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
-    const { timeScale, visibleWindowTime } = globals.frontendLocalState;
+    const {timeScale, visibleWindowTime} = globals.frontendLocalState;
     const data = this.data();
     const charWidth = ctx.measureText('dbpqaouk').width / 8;
 
@@ -194,15 +194,15 @@ class ThreadStateTrack extends Track<Config, Data> {
 
     // The draw of the rect on the selected slice must happen after the other
     // drawings, otherwise it would result under another rect.
-    let drawRectOnSelected = () => { };
+    let drawRectOnSelected = () => {};
 
     checkerboardExcept(
-      ctx,
-      this.getHeight(),
-      timeScale.timeToPx(visibleWindowTime.start),
-      timeScale.timeToPx(visibleWindowTime.end),
-      timeScale.timeToPx(data.start),
-      timeScale.timeToPx(data.end),
+        ctx,
+        this.getHeight(),
+        timeScale.timeToPx(visibleWindowTime.start),
+        timeScale.timeToPx(visibleWindowTime.end),
+        timeScale.timeToPx(data.start),
+        timeScale.timeToPx(data.end),
     );
 
     ctx.textAlign = 'center';
@@ -232,8 +232,8 @@ class ThreadStateTrack extends Track<Config, Data> {
 
       const currentSelection = globals.state.currentSelection;
       const isSelected = currentSelection &&
-        currentSelection.kind === 'THREAD_STATE' &&
-        currentSelection.id === data.ids[i];
+          currentSelection.kind === 'THREAD_STATE' &&
+          currentSelection.id === data.ids[i];
 
       const color = colorForState(state);
 
@@ -255,19 +255,19 @@ class ThreadStateTrack extends Track<Config, Data> {
       if (isSelected) {
         drawRectOnSelected = () => {
           const rectStart =
-            Math.max(0 - EXCESS_WIDTH, timeScale.timeToPx(tStart));
+              Math.max(0 - EXCESS_WIDTH, timeScale.timeToPx(tStart));
           const rectEnd = Math.min(
-            timeScale.timeToPx(visibleWindowTime.end) + EXCESS_WIDTH,
-            timeScale.timeToPx(tEnd));
+              timeScale.timeToPx(visibleWindowTime.end) + EXCESS_WIDTH,
+              timeScale.timeToPx(tEnd));
           const color = colorForState(state);
           ctx.strokeStyle = `hsl(${color.h},${color.s}%,${color.l * 0.7}%)`;
           ctx.beginPath();
           ctx.lineWidth = 3;
           ctx.strokeRect(
-            rectStart,
-            MARGIN_TOP - 1.5,
-            rectEnd - rectStart,
-            RECT_HEIGHT + 3);
+              rectStart,
+              MARGIN_TOP - 1.5,
+              rectEnd - rectStart,
+              RECT_HEIGHT + 3);
           ctx.closePath();
         };
       }
@@ -275,17 +275,17 @@ class ThreadStateTrack extends Track<Config, Data> {
     drawRectOnSelected();
   }
 
-  onMouseClick({ x }: { x: number }) {
+  onMouseClick({x}: {x: number}) {
     const data = this.data();
     if (data === undefined) return false;
-    const { timeScale } = globals.frontendLocalState;
+    const {timeScale} = globals.frontendLocalState;
     const time = timeScale.pxToTime(x);
     const index = search(data.starts, time);
     if (index === -1) return false;
 
     const id = data.ids[index];
     globals.makeSelection(
-      Actions.selectThreadState({ id, trackId: this.trackState.id }));
+        Actions.selectThreadState({id, trackId: this.trackState.id}));
     return true;
   }
 }

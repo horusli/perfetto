@@ -19,8 +19,8 @@ import { TrackData } from '../../common/track_data';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import { NewTrackArgs, Track } from '../../frontend/track';
-import { ChromeSliceTrack } from '../chrome_slices';
+import {NewTrackArgs, Track} from '../../frontend/track';
+import {ChromeSliceTrack} from '../chrome_slices';
 
 export const ASYNC_SLICE_TRACK_KIND = 'AsyncSliceTrack';
 

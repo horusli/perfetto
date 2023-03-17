@@ -20,10 +20,11 @@
 #include <map>
 #include <set>
 
+#include "perfetto/ext/base/optional.h"
 #include "src/kernel_utils/syscall_table.h"
 #include "src/traced/probes/ftrace/compact_sched.h"
 #include "src/traced/probes/ftrace/ftrace_config_utils.h"
-#include "src/traced/probes/ftrace/ftrace_controller.h"
+#include "src/traced/probes/ftrace/ftrace_print_filter.h"
 #include "src/traced/probes/ftrace/ftrace_procfs.h"
 #include "src/traced/probes/ftrace/proto_translation_table.h"
 
@@ -43,16 +44,21 @@ struct FtraceDataSourceConfig {
   FtraceDataSourceConfig(EventFilter _event_filter,
                          EventFilter _syscall_filter,
                          CompactSchedConfig _compact_sched,
+                         base::Optional<FtracePrintFilterConfig> _print_filter,
                          std::vector<std::string> _atrace_apps,
                          std::vector<std::string> _atrace_categories,
-                         bool _symbolize_ksyms)
+                         bool _symbolize_ksyms,
+                         bool _preserve_ftrace_buffer,
+                         base::FlatSet<int64_t> _syscalls_returning_fd)
       : event_filter(std::move(_event_filter)),
         syscall_filter(std::move(_syscall_filter)),
         compact_sched(_compact_sched),
+        print_filter(std::move(_print_filter)),
         atrace_apps(std::move(_atrace_apps)),
         atrace_categories(std::move(_atrace_categories)),
-        symbolize_ksyms(_symbolize_ksyms) {}
-
+        symbolize_ksyms(_symbolize_ksyms),
+        preserve_ftrace_buffer(_preserve_ftrace_buffer),
+        syscalls_returning_fd(std::move(_syscalls_returning_fd)) {}
   // The event filter allows to quickly check if a certain ftrace event with id
   // x is enabled for this data source.
   EventFilter event_filter;
@@ -64,12 +70,22 @@ struct FtraceDataSourceConfig {
   // Configuration of the optional compact encoding of scheduling events.
   const CompactSchedConfig compact_sched;
 
+  // Optional configuration that's used to filter "ftrace/print" events based on
+  // the content of their "buf" field.
+  base::Optional<FtracePrintFilterConfig> print_filter;
+
   // Used only in Android for ATRACE_EVENT/os.Trace() userspace annotations.
   std::vector<std::string> atrace_apps;
   std::vector<std::string> atrace_categories;
 
   // When enabled will turn on the kallsyms symbolizer in CpuReader.
   const bool symbolize_ksyms;
+
+  // Does not clear previous traces.
+  const bool preserve_ftrace_buffer;
+
+  // List of syscalls monitored to return a new filedescriptor upon success
+  base::FlatSet<int64_t> syscalls_returning_fd;
 };
 
 // Ftrace is a bunch of globally modifiable persistent state.
@@ -148,6 +164,12 @@ class FtraceConfigMuxer {
     return current_state_.syscall_filter;
   }
 
+  // Returns the syscall ids for the current architecture
+  // matching the (subjectively) most commonly used syscalls
+  // producing a new file descriptor as their return value.
+  static base::FlatSet<int64_t> GetSyscallsReturningFds(
+      const SyscallTable& syscalls);
+
  private:
   static bool StartAtrace(const std::vector<std::string>& apps,
                           const std::vector<std::string>& categories,
@@ -163,6 +185,7 @@ class FtraceConfigMuxer {
     bool atrace_on = false;
     std::vector<std::string> atrace_apps;
     std::vector<std::string> atrace_categories;
+    bool saved_tracing_on;  // Backup for the original tracing_on.
   };
 
   FtraceConfigMuxer(const FtraceConfigMuxer&) = delete;

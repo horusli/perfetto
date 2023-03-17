@@ -319,12 +319,22 @@ declare_args() {
       perfetto_build_standalone && enable_perfetto_trace_processor_sqlite &&
       host_os != "win"
 
+  # Allows to build the perfetto.dev website.
+  # WARNING: if this flag is enabled, the build performs globbing at generation
+  # time. Incremental builds that add/remove files will not be supported without
+  # rerunning gn.
+  enable_perfetto_site = false
+
   # Skip buildtools dependency checks (needed for ChromeOS).
   skip_buildtools_check = false
 
   # Used by CrOS system builds. Uses the system version of protobuf
   # from /usr/include instead of the hermetic one.
   perfetto_use_system_protobuf = false
+
+  # Used by CrOS system builds. Uses the system version of sqlite
+  # from /usr/include instead of the hermetic one.
+  perfetto_use_system_sqlite = false
 
   perfetto_use_system_zlib = false
 }

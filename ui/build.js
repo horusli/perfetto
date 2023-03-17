@@ -83,13 +83,14 @@ const cfg = {
   verbose: false,
   debug: false,
   startHttpServer: true,
-  httpServerListenHost: '127.0.0.1',
-  //httpServerListenHost: '192.168.2.124',
+  //httpServerListenHost: '127.0.0.1',
+  httpServerListenHost: '192.168.2.121',
   //httpServerListenHost: '172.28.150.7',
   httpServerListenPort: 10000,
   wasmModules: ['trace_processor', 'traceconv'],
   crossOriginIsolation: false,
   testFilter: '',
+  noOverrideGnArgs: false,
 
   // The fields below will be changed by main() after cmdline parsing.
   // Directory structure:
@@ -154,6 +155,7 @@ async function main() {
   parser.addArgument(
       ['--test-filter', '-f'],
       {help: 'filter Jest tests by regex, e.g. \'chrome_render\''});
+  parser.addArgument(['--no-override-gn-args'], {action: 'storeTrue'});
 
   const args = parser.parseArgs();
   const clean = !args.no_build;
@@ -172,6 +174,7 @@ async function main() {
   cfg.verbose = !!args.verbose;
   cfg.debug = !!args.debug;
   cfg.startHttpServer = args.serve;
+  cfg.noOverrideGnArgs = !!args.no_override_gn_args;
   if (args.serve_host) {
     cfg.httpServerListenHost = args.serve_host;
   }
@@ -255,7 +258,7 @@ async function main() {
   const tStart = Date.now();
   while (!isDistComplete()) {
     const secs = Math.ceil((Date.now() - tStart) / 1000);
-    process.stdout.write(`Waiting for first build to complete... ${secs} s\r`);
+    process.stdout.write(`\t\tWaiting for first build to complete... ${secs} s\r`);
     await new Promise((r) => setTimeout(r, 500));
   }
   if (cfg.watch) console.log('\nFirst build completed!');
@@ -337,15 +340,21 @@ function compileProtos() {
   const dstJs = pjoin(cfg.outGenDir, 'protos.js');
   const dstTs = pjoin(cfg.outGenDir, 'protos.d.ts');
   const inputs = [
-    'protos/perfetto/trace_processor/trace_processor.proto',
     'protos/perfetto/common/trace_stats.proto',
     'protos/perfetto/common/tracing_service_capabilities.proto',
     'protos/perfetto/config/perfetto_config.proto',
     'protos/perfetto/ipc/consumer_port.proto',
     'protos/perfetto/ipc/wire_protocol.proto',
     'protos/perfetto/metrics/metrics.proto',
+    'protos/perfetto/trace/perfetto/perfetto_metatrace.proto',
+    'protos/perfetto/trace/trace.proto',
+    'protos/perfetto/trace/trace_packet.proto',
+    'protos/perfetto/trace_processor/trace_processor.proto',
   ];
+  // Can't put --no-comments here - The comments are load bearing for
+  // the pbts invocation which follows.
   const pbjsArgs = [
+    '--no-beautify',
     '--force-number',
     '-t',
     'static-module',
@@ -357,7 +366,7 @@ function compileProtos() {
     dstJs,
   ].concat(inputs);
   addTask(execNode, ['pbjs', pbjsArgs]);
-  const pbtsArgs = ['-p', ROOT_DIR, '-o', dstTs, dstJs];
+  const pbtsArgs = ['--no-comments', '-p', ROOT_DIR, '-o', dstTs, dstJs];
   addTask(execNode, ['pbts', pbtsArgs]);
 }
 
@@ -409,8 +418,10 @@ function updateSymlinks() {
 // out/tsc/, so the typescript compiler and the bundler can pick them up.
 function buildWasm(skipWasmBuild) {
   if (!skipWasmBuild) {
-    const gnArgs = ['gen', `--args=is_debug=${cfg.debug}`, cfg.outDir];
-    addTask(exec, [pjoin(ROOT_DIR, 'tools/gn'), gnArgs]);
+    if (!cfg.noOverrideGnArgs) {
+      const gnArgs = ['gen', `--args=is_debug=${cfg.debug}`, cfg.outDir];
+      addTask(exec, [pjoin(ROOT_DIR, 'tools/gn'), gnArgs]);
+    }
 
     const ninjaArgs = ['-C', cfg.outDir];
     ninjaArgs.push(...cfg.wasmModules.map((x) => `${x}_wasm`));
