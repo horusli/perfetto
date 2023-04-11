@@ -1050,7 +1050,7 @@ class TrackDecider {
         from process_track
         left join process using(upid)
         where
-            process_track.name is null or
+            process_track.name is not null or
             process_track.name not like "% Timeline"
         group by
           process_track.upid,
