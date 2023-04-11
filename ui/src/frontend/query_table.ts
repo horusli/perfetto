@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-import * as m from 'mithril';
+import m from 'mithril';
 
 import {Actions} from '../common/actions';
 import {QueryResponse} from '../common/queries';
@@ -91,6 +91,8 @@ class QueryTableRow implements m.ClassComponent<QueryTableRowAttrs> {
                   onclick: () => downloadData(`${col}.blob`, value),
                 },
                 `Blob (${value.length} bytes)`)));
+      } else if (typeof value === 'bigint') {
+        cells.push(m('td', value.toString()));
       } else {
         cells.push(m('td', value));
       }
